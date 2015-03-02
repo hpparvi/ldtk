@@ -11,18 +11,13 @@ from numpy.random import normal
 from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.optimize import fmin
 
-try:
-    from IPython.display import display, clear_output
-    from IPython.html.widgets import IntProgressWidget
-    w = IntProgressWidget()
-    with_notebook = True
-except AttributeError:
-    with_notebook = False
-
-home = os.environ['HOME']
-ddir = join(home,'work/Projects/RoPACS/data/phoenix_specint')
+from ldtool import cache_dir, with_notebook
 
 TWO_PI = 2*pi
+
+if with_notebook:
+    from IPython.display import display, clear_output
+    from IPython.html.widgets import IntProgressWidget
 
 def quadratic_law(mu,ld):
     """Quadratic limb-darkening law as  described in (Mandel & Agol, 2001).
@@ -48,7 +43,7 @@ class SpecIntFile(object):
         
     @property
     def local_path(self):
-        return join(ddir,self._zstr,self.name)
+        return join(cache_dir,self._zstr,self.name)
 
     @property
     def local_exists(self):
@@ -71,7 +66,7 @@ class Runner(object):
 
     def _local_path(self, teff_or_fn, logg=None, z=None):
         fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
-        return join(ddir,'Z'+fn[13:17],fn)
+        return join(cache_dir,'Z'+fn[13:17],fn)
         
     def _local_exists(self, teff_or_fn, logg=None, z=None):
         print self._local_path(teff_or_fn, logg, z)
@@ -107,7 +102,7 @@ class Runner(object):
         ftp.close()
         return [f in efiles for f in (files or self.files)]
     
-    def download_files(self, force=False):
+    def download_uncached_files(self, force=False):
         if with_notebook:
             pbar = IntProgressWidget()
             pbar.max = self.not_cached if not force else len(self.files)
@@ -118,8 +113,8 @@ class Runner(object):
         ftp.login()
         ftp.cwd(self.edir)
         for fid,f in enumerate(self.files):
-            if not exists(join(ddir,f._zstr)):
-                os.mkdir(join(ddir,f._zstr))
+            if not exists(join(cache_dir,f._zstr)):
+                os.mkdir(join(cache_dir,f._zstr))
             if not f.local_exists or force:
                 localfile = open(f.local_path, 'wb')
                 ftp.cwd(f._zstr)
@@ -142,13 +137,13 @@ class Runner(object):
         
         
 class LDPSet(object):
-    def __init__(self, filters, mu, ldp, ldp_e):
+    def __init__(self, filters, mu, ldp, ldp_s):
         self.filters  = filters 
         self.nfilters = len(filters)
         self.mu       = mu
         self.z        = sqrt(1-mu**2)
         self.mean     = ldp
-        self.error    = ldp_e
+        self.std      = ldp_s
         self.nmu      = mu.size
 
         self._lnl     = zeros(self.nfilters)
@@ -157,14 +152,14 @@ class LDPSet(object):
 
     def set_uncertainty_multiplier(self, em):
         self._em      = em                                     ## uncertainty multiplier
-        self._lnc2    = [-log(em*e).sum() for e in self.error] ## 2nd ln likelihood term
-        self._err2    = [(em*e)**2 for e in self.error]        ## variances
+        self._lnc2    = [-log(em*e).sum() for e in self.std]   ## 2nd ln likelihood term
+        self._err2    = [(em*e)**2 for e in self.std]          ## variances
 
     @property
     def quadratic_coeffs(self):
         return [fmin(lambda pv:((self.mean[iflt]-quadratic_law(self.mu, pv))**2).sum(), [0.2,0.1], disp=0) for iflt in range(self.nfilters)]
 
-    def lnlike_quadratic(self, ldcs, joint=False):
+    def lnlike_quadratic(self, ldcs, joint=True):
         for fid, ldc in enumerate(asarray(ldcs).reshape([-1,2])):
             model = quadratic_law(self.mu, ldc)
             self._lnl[fid] = self._lnc1 + self._lnc2[fid] -0.5*((self.mean[fid]-model)**2/self._err2[fid]).sum()
@@ -220,25 +215,14 @@ class LDPSetCreator(object):
                 a[:,3] = self.mu
                 self.vals[iflt,ismp,:] = self.itps[iflt](a)
 
-        ldp   = array([self.vals[i,:,:].mean(0) for i in range(self.nfilters)])
-        ldp_e = array([self.vals[i,:,:].std(0)/sqrt(nsamples) for i in range(self.nfilters)])
-        return LDPSet(self.filter_names, self.mu, ldp, ldp_e)
+        ldp_m = array([self.vals[i,:,:].mean(0) for i in range(self.nfilters)])
+        ldp_s = array([self.vals[i,:,:].std(0)  for i in range(self.nfilters)])
+        return LDPSet(self.filter_names, self.mu, ldp_m, ldp_s)
 
     @property
     def filter_names(self):
         return [f.name for f in self.filters]
 
-
-class StepFilter(object):
-    def __init__(self, name, wl_min, wl_max):
-        self.name = name
-        self.wl_min = wl_min
-        self.wl_max = wl_max
-        
-    def __call__(self, wl):
-        w = zeros_like(wl)
-        w[(wl>self.wl_min) & (wl<self.wl_max)] = 1.
-        return w
 
 
 ## UTILITY CLASSES
