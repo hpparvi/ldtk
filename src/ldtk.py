@@ -5,7 +5,7 @@ from glob import glob
 from ftplib import FTP
 from itertools import product
 from os.path import exists, join, basename
-from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like,
+from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    log, sqrt, clip, pi)
 from numpy.random import normal
 from scipy.interpolate import RegularGridInterpolator as RGI
@@ -13,7 +13,12 @@ from scipy.optimize import fmin
 
 from ldtool import cache_dir, with_notebook
 
-TWO_PI = 2*pi
+## Set up some constants
+## ---------------------
+TWO_PI      = 2*pi
+TEFF_POINTS = delete(arange(2300,12001,100), [27])
+LOGG_POINTS = arange(0,6.1,0.5)
+Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, 0, 0.5, 1.0])
 
 if with_notebook:
     from IPython.display import display, clear_output
@@ -52,9 +57,6 @@ class SpecIntFile(object):
     
 class Runner(object):
     def __init__(self, limits=None, verbosity=1):
-        self.teff_points = arange(2300,12001,100)
-        self.logg_points = arange(0,6.1,0.5)
-        self.z_points    = array([-4.0, -3.0, -2.0, -1.5, -1.0, 0, 0.5, 1.0])
         self.fnt = 'lte{teff:05d}-{logg:4.2f}-{z:3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
@@ -77,13 +79,13 @@ class Runner(object):
     
     def set_limits(self, teff_lims, logg_lims, z_lims):
         self.teffl = teff_lims
-        self.teffs = inside(self.teff_points, teff_lims)
+        self.teffs = inside(TEFF_POINTS, teff_lims)
         self.nteff = len(self.teffs)
         self.loggl = logg_lims
-        self.loggs = inside(self.logg_points, logg_lims)
+        self.loggs = inside(LOGG_POINTS, logg_lims)
         self.nlogg = len(self.loggs)
         self.zl    = z_lims
-        self.zs    = inside(self.z_points, z_lims)
+        self.zs    = inside(Z_POINTS, z_lims)
         self.nz    = len(self.zs)
         self.pars  = [p for p in product(self.teffs,self.loggs,self.zs)]
         self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
@@ -116,11 +118,11 @@ class Runner(object):
             if not exists(join(cache_dir,f._zstr)):
                 os.mkdir(join(cache_dir,f._zstr))
             if not f.local_exists or force:
-                localfile = open(f.local_path, 'wb')
                 ftp.cwd(f._zstr)
+                localfile = open(f.local_path, 'wb')
                 ftp.retrbinary('RETR '+f.name, localfile.write)
-                ftp.cwd('..')
                 localfile.close()
+                ftp.cwd('..')
                 self.not_cached -= 1
                 if with_notebook:
                     pbar.value += 1
@@ -167,16 +169,26 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, metal, runner, filters, limits=None):
+    def __init__(self, teff, logg, z, filters, limits=None):
         self.teff  = teff
         self.logg  = logg
-        self.metal = metal
+        self.metal = z
 
-        self.runner   = r = runner
-        self.files    = runner.local_filenames
+        if not limits:
+            teff_lims  = a_lims(TEFF_POINTS, *teff)
+            logg_lims  = a_lims(LOGG_POINTS, *logg)
+            metal_lims = a_lims(Z_POINTS, *metal)
+        else:
+            teff_lims, logg_lims, metal_lims = lims
+
+
+        self.runner   = r = Runner(limits=[teff_lims, logg_lims, metal_lims])
+        self.files    = self.runner.local_filenames
         self.filters  = filters
         self.nfiles   = len(self.files)
         self.nfilters = len(filters)
+
+        self.runner.download_uncached_files()
 
         with pf.open(self.files[0]) as hdul:
             wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
