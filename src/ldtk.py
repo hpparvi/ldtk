@@ -177,7 +177,7 @@ class LDPSetCreator(object):
         if not limits:
             teff_lims  = a_lims(TEFF_POINTS, *teff)
             logg_lims  = a_lims(LOGG_POINTS, *logg)
-            metal_lims = a_lims(Z_POINTS, *metal)
+            metal_lims = a_lims(Z_POINTS, *z)
         else:
             teff_lims, logg_lims, metal_lims = lims
 
