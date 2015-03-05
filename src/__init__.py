@@ -12,7 +12,7 @@ try:
 except AttributeError:
     with_notebook = False
 
-from ldtk import LDPSetCreator, LDPSet, Runner, quadratic_law
+from ldtk import LDPSetCreator, LDPSet, quadratic_law
 from ldtool.filters import BoxcarFilter, TabulatedFilter
 
-__all__ = ['LDPSetCreator','LDPSet','Runner','quadratic_law','BoxcarFilter','TabulatedFilter']
+__all__ = ['LDPSetCreator','LDPSet','quadratic_law','BoxcarFilter','TabulatedFilter']

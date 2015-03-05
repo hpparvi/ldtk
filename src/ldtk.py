@@ -55,7 +55,7 @@ class SpecIntFile(object):
         return exists(self.local_path)
     
     
-class Runner(object):
+class Client(object):
     def __init__(self, limits=None, verbosity=1):
         self.fnt = 'lte{teff:05d}-{logg:4.2f}-{z:3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
@@ -169,7 +169,7 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, z, filters, limits=None):
+    def __init__(self, teff, logg, z, filters, qe=None, limits=None):
         self.teff  = teff
         self.logg  = logg
         self.metal = z
@@ -182,13 +182,14 @@ class LDPSetCreator(object):
             teff_lims, logg_lims, metal_lims = lims
 
 
-        self.runner   = r = Runner(limits=[teff_lims, logg_lims, metal_lims])
-        self.files    = self.runner.local_filenames
+        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims])
+        self.files    = self.client.local_filenames
         self.filters  = filters
         self.nfiles   = len(self.files)
         self.nfilters = len(filters)
+        self.qe       = qe or (lambda wl: 1.)
 
-        self.runner.download_uncached_files()
+        self.client.download_uncached_files()
 
         with pf.open(self.files[0]) as hdul:
             wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
@@ -201,15 +202,15 @@ class LDPSetCreator(object):
         
         self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu_orig])
         for fid,f in enumerate(self.filters):
-            w = f(wl)
+            w = f(wl) * self.qe(wl)
             for did,df in enumerate(self.files):
                 self.fluxes[fid,did,:]  = (pf.getdata(df)*w).mean(1)
                 self.fluxes[fid,did,:] /= self.fluxes[fid,did,-1]
 
         ## Create n_filter interpolator objects
         ##
-        self.itps = [RGI((r.teffs,r.loggs, r.zs, self.mu_orig), 
-                         self.fluxes[i,:,:].reshape([r.nteff, r.nlogg, r.nz, self.nmu_orig])) for i in range(self.nfilters)]
+        self.itps = [RGI((c.teffs, c.loggs, c.zs, self.mu_orig), 
+                         self.fluxes[i,:,:].reshape([c.nteff, c.nlogg, c.nz, self.nmu_orig])) for i in range(self.nfilters)]
         
         self.z  = linspace(0,0.995,self.nmu_orig)
         self.mu = sqrt(1-self.z**2)
@@ -221,9 +222,9 @@ class LDPSetCreator(object):
         for iflt in range(self.nfilters):
             for ismp in range(nsamples):
                 a = ones([self.nmu,4])
-                a[:,0] = clip(normal(*self.teff),  *self.runner.teffl)
-                a[:,1] = clip(normal(*self.logg),  *self.runner.loggl)
-                a[:,2] = clip(normal(*self.metal), *self.runner.zl)
+                a[:,0] = clip(normal(*self.teff),  *self.client.teffl)
+                a[:,1] = clip(normal(*self.logg),  *self.client.loggl)
+                a[:,2] = clip(normal(*self.metal), *self.client.zl)
                 a[:,3] = self.mu
                 self.vals[iflt,ismp,:] = self.itps[iflt](a)
 
