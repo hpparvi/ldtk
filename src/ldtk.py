@@ -11,7 +11,7 @@ from numpy.random import normal
 from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.optimize import fmin
 
-from ldtool import cache_dir, with_notebook
+from ldtool import ldtk_cache, with_notebook
 
 ## Set up some constants
 ## ---------------------
@@ -48,7 +48,7 @@ class SpecIntFile(object):
         
     @property
     def local_path(self):
-        return join(cache_dir,self._zstr,self.name)
+        return join(ldtk_cache,self._zstr,self.name)
 
     @property
     def local_exists(self):
@@ -68,7 +68,7 @@ class Client(object):
 
     def _local_path(self, teff_or_fn, logg=None, z=None):
         fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
-        return join(cache_dir,'Z'+fn[13:17],fn)
+        return join(ldtk_cache,'Z'+fn[13:17],fn)
         
     def _local_exists(self, teff_or_fn, logg=None, z=None):
         print self._local_path(teff_or_fn, logg, z)
@@ -107,16 +107,16 @@ class Client(object):
     def download_uncached_files(self, force=False):
         if with_notebook:
             pbar = IntProgressWidget()
-            pbar.max = self.not_cached if not force else len(self.files)
-            if self.verbosity > 0:
+            if (self.verbosity > 0) & (self.not_cached > 0):
                 display(pbar)
-            
+            pbar.max = max(1, self.not_cached if not force else len(self.files))
+
         ftp = FTP(self.eftp)
         ftp.login()
         ftp.cwd(self.edir)
         for fid,f in enumerate(self.files):
-            if not exists(join(cache_dir,f._zstr)):
-                os.mkdir(join(cache_dir,f._zstr))
+            if not exists(join(ldtk_cache,f._zstr)):
+                os.mkdir(join(ldtk_cache,f._zstr))
             if not f.local_exists or force:
                 ftp.cwd(f._zstr)
                 localfile = open(f.local_path, 'wb')
@@ -159,7 +159,7 @@ class LDPSet(object):
 
     @property
     def quadratic_coeffs(self):
-        return [fmin(lambda pv:((self.mean[iflt]-quadratic_law(self.mu, pv))**2).sum(), [0.2,0.1], disp=0) for iflt in range(self.nfilters)]
+        return [fmin(lambda pv:-self.lnlike_quadratic(pv), [0.2,0.1], disp=0) for iflt in range(self.nfilters)]
 
     def lnlike_quadratic(self, ldcs, joint=True):
         for fid, ldc in enumerate(asarray(ldcs).reshape([-1,2])):
@@ -169,7 +169,7 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, z, filters, qe=None, limits=None):
+    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False):
         self.teff  = teff
         self.logg  = logg
         self.metal = z
@@ -189,7 +189,7 @@ class LDPSetCreator(object):
         self.nfilters = len(filters)
         self.qe       = qe or (lambda wl: 1.)
 
-        self.client.download_uncached_files()
+        self.client.download_uncached_files(force=force_download)
 
         with pf.open(self.files[0]) as hdul:
             wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]

@@ -1,8 +1,13 @@
 import os
-from os.path import join
+from os.path import join, exists
 
-home_dir  = os.environ['HOME']
-cache_dir = join(home_dir,'work/Projects/RoPACS/data/phoenix_specint')
+ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
+ldtk_cache = join(ldtk_root,'cache')
+
+if not exists(ldtk_root):
+    os.mkdir(ldtk_root)
+if not exists(ldtk_cache):
+    os.mkdir(ldtk_cache)
 
 try:
     from IPython.display import display, clear_output
