@@ -6,7 +6,7 @@ from ftplib import FTP
 from itertools import product
 from os.path import exists, join, basename
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
-                   vstack, cov, exp, log, sqrt, clip, pi)
+                   poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform
 from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.optimize import fmin
@@ -24,8 +24,24 @@ if with_notebook:
     from IPython.display import display, clear_output
     from IPython.html.widgets import IntProgressWidget
 
+
 def dxdx(f, x, h):
     return (f(x+h) - 2*f(x) + f(x-h)) / h**2
+
+
+def dxdy(f,x,y,h=1e-5):
+    return ((f([x+h,y+h])-f([x+h,y-h]))-(f([x-h,y+h])-f([x-h,y-h])))/(4*h**2)
+
+
+def v_from_poly(lf, x0, dx=1e-3, nx=5):
+    """Estimates the variance of a log distribution approximating it as a normal distribution."""
+    xs  = linspace(x0-dx, x0+dx, nx)
+    fs  = array([lf(x) for x in xs])
+    p   = poly1d(polyfit(xs, fs, 2))
+    x0  = p.deriv(1).r
+    var = -1./p.deriv(2)(x0)
+    return var
+
 
 def quadratic_law(mu,ld):
     """Quadratic limb-darkening law as  described in (Mandel & Agol, 2001).
@@ -35,6 +51,7 @@ def quadratic_law(mu,ld):
 
 def inside(a,lims):
     return a[(a>=lims[0])&(a<=lims[1])]
+
 
 def a_lims(a,v,e,s=3):
     return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
@@ -163,28 +180,34 @@ class LDPSet(object):
         self._err2    = [(em*e)**2 for e in self._std]          ## variances
 
 
-    def coeffs_quad(self, do_mc=False, n_mc_samples=20000, sf=5):
-        qcs  = [fmin(lambda pv:-self.lnlike_quad(pv, flt=iflt), [0.2,0.1], disp=0) for iflt in range(self._nfilters)]
+    def coeffs_qd(self, return_cm=False, do_mc=False, n_mc_samples=20000, sf=5):
+        qcs  = [fmin(lambda pv:-self.lnlike_qd(pv, flt=iflt), [0.2,0.1], disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
-            s1 = 1/sqrt(-dxdx(lambda x:self.lnlike_quad([x,qc[1]], flt=iflt), qc[0], 1e-5))
-            s2 = 1/sqrt(-dxdx(lambda x:self.lnlike_quad([qc[0],x], flt=iflt), qc[1], 1e-5))
+            s1 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([x,qc[1]], flt=iflt), qc[0], 1e-5))
+            s2 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([qc[0],x], flt=iflt), qc[1], 1e-5))
 
             if do_mc:
                 us = uniform(qc[0]-sf*s1,qc[0]+sf*s1,size=n_mc_samples)
                 vs = uniform(qc[1]-sf*s2,qc[1]+sf*s2,size=n_mc_samples)
-                lls = array([self.lnlike_quad([_u,_v], flt=iflt) for _u,_v in zip(us,vs)])
+                lls = array([self.lnlike_qd([_u,_v], flt=iflt) for _u,_v in zip(us,vs)])
                 ls = exp(lls-lls.max())
                 msk = ls > uniform(size=ls.size)
                 self._samples['quadratic'] = d = vstack([us[msk],vs[msk]]).T
-                covs.append(cov(d[:,0], d[:,1]))
+                if return_cm:
+                    covs.append(cov(d[:,0], d[:,1]))
+                else:
+                    covs.append(sqrt(cov(d[:,0], d[:,1]).diagonal()))
             else:
-                covs.append([s1,s2])
+                if return_cm:
+                    covs.append([[s1**2,0],[0,s2**2]])
+                else:
+                    covs.append([s1,s2])
 
         return array(qcs), array(covs)
 
             
-    def lnlike_quad(self, ldcs, joint=True, flt=None):
+    def lnlike_qd(self, ldcs, joint=True, flt=None):
         if not flt:
             for fid, ldc in enumerate(asarray(ldcs).reshape([-1,2])):
                 model = quadratic_law(self._mu, ldc)
@@ -195,11 +218,13 @@ class LDPSet(object):
             self._lnl[flt] = self._lnc1 + self._lnc2[flt] -0.5*((self._mean[flt]-model)**2/self._err2[flt]).sum()
             return self._lnl[flt]
 
+
     @property
     def profile_averages(self):
         return self._mean
 
     @property
+
     def profile_uncertainties(self):
         return self._std
 
