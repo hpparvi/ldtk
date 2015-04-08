@@ -7,11 +7,13 @@ from itertools import product
 from os.path import exists, join, basename
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
-from numpy.random import normal, uniform
+from numpy.random import normal, uniform, multivariate_normal
 from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.optimize import fmin
 
 from ldtool import ldtk_cache, with_notebook
+
+from ld_models import QuadraticModel as QDM
 
 ## Set up some constants
 ## ---------------------
@@ -180,7 +182,7 @@ class LDPSet(object):
         self._err2    = [(em*e)**2 for e in self._std]          ## variances
 
 
-    def coeffs_qd(self, return_cm=False, do_mc=False, do_mcmc=False, n_mc_samples=20000, sf=5):
+    def coeffs_qd(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25, return_chain=False):
         qcs  = [fmin(lambda pv:-self.lnlike_qd(pv, flt=iflt), [0.2,0.1], disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
@@ -189,39 +191,31 @@ class LDPSet(object):
 
             ## Simple MCMC uncertainty estimation
             ## ----------------------------------
-            if do_mcmc:
+            if do_mc:
+                self._samples['quadratic'] = []
                 logl  = zeros(n_mc_samples)
                 chain = zeros([n_mc_samples,2])
                 
-                chain[0,:] = qcs[iflt]
-                logl[0]    = ps.lnlike_qd(pv[0], flt=0)
+                chain[0,:] = qc
+                logl[0]    = self.lnlike_qd(chain[0], flt=0)
 
-                for i in range(1,n_mc_samples):
-                    pos_t  = chain[i-1] + multivariate_normal([0,0], [[0.0001,0.0],[0.0,0.0001]])
-                    logl_t = ps.lnlike_qd(pos_t, flt=0)
+                for i in xrange(1,n_mc_samples):
+                    pos_t  = multivariate_normal(chain[i-1], [[s1**2,0.0],[0.0,s2**2]])
+                    logl_t = self.lnlike_qd(pos_t, flt=iflt)
                     if uniform() < exp(logl_t-logl[i-1]):
                         chain[i,:] = pos_t
                         logl[i]    = logl_t
                     else:
-                        chain[i,:] = pv[i-1,:]
+                        chain[i,:] = chain[i-1,:]
                         logl[i]    = logl[i-1]
+                self._samples['quadratic'].append(chain)
+                ch = chain[mc_burn::mc_thin,:]
 
                 if return_cm:
-                    covs.append(cov(chain[:,0], chain[:,1]))
+                    covs.append(cov(ch[:,0], ch[:,1]))
                 else:
-                    covs.append(sqrt(cov(chain[:,0], chain[:,1]).diagonal()))
+                    covs.append(sqrt(cov(ch[:,0], ch[:,1]).diagonal()))
 
-            elif do_mc:
-                us = uniform(qc[0]-sf*s1,qc[0]+sf*s1,size=n_mc_samples)
-                vs = uniform(qc[1]-sf*s2,qc[1]+sf*s2,size=n_mc_samples)
-                lls = array([self.lnlike_qd([_u,_v], flt=iflt) for _u,_v in zip(us,vs)])
-                ls = exp(lls-lls.max())
-                msk = ls > uniform(size=ls.size)
-                self._samples['quadratic'] = d = vstack([us[msk],vs[msk]]).T
-                if return_cm:
-                    covs.append(cov(d[:,0], d[:,1]))
-                else:
-                    covs.append(sqrt(cov(d[:,0], d[:,1]).diagonal()))
             else:
                 if return_cm:
                     covs.append([[s1**2,0],[0,s2**2]])
@@ -234,11 +228,11 @@ class LDPSet(object):
     def lnlike_qd(self, ldcs, joint=True, flt=None):
         if not flt:
             for fid, ldc in enumerate(asarray(ldcs).reshape([-1,2])):
-                model = quadratic_law(self._mu, ldc)
+                model = QDM.evaluate(self._mu, ldc)
                 self._lnl[fid] = self._lnc1 + self._lnc2[fid] -0.5*((self._mean[fid]-model)**2/self._err2[fid]).sum()
             return self._lnl.sum() if joint else self._lnl
         else:
-            model = quadratic_law(self._mu, asarray(ldcs))
+            model = QDM.evaluate(self._mu, asarray(ldcs))
             self._lnl[flt] = self._lnc1 + self._lnc2[flt] -0.5*((self._mean[flt]-model)**2/self._err2[flt]).sum()
             return self._lnl[flt]
 
