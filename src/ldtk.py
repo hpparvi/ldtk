@@ -180,14 +180,38 @@ class LDPSet(object):
         self._err2    = [(em*e)**2 for e in self._std]          ## variances
 
 
-    def coeffs_qd(self, return_cm=False, do_mc=False, n_mc_samples=20000, sf=5):
+    def coeffs_qd(self, return_cm=False, do_mc=False, do_mcmc=False, n_mc_samples=20000, sf=5):
         qcs  = [fmin(lambda pv:-self.lnlike_qd(pv, flt=iflt), [0.2,0.1], disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
             s1 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([x,qc[1]], flt=iflt), qc[0], 1e-5))
             s2 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([qc[0],x], flt=iflt), qc[1], 1e-5))
 
-            if do_mc:
+            ## Simple MCMC uncertainty estimation
+            ## ----------------------------------
+            if do_mcmc:
+                logl  = zeros(n_mc_samples)
+                chain = zeros([n_mc_samples,2])
+                
+                chain[0,:] = qcs[iflt]
+                logl[0]    = ps.lnlike_qd(pv[0], flt=0)
+
+                for i in range(1,n_mc_samples):
+                    pos_t  = chain[i-1] + multivariate_normal([0,0], [[0.0001,0.0],[0.0,0.0001]])
+                    logl_t = ps.lnlike_qd(pos_t, flt=0)
+                    if uniform() < exp(logl_t-logl[i-1]):
+                        chain[i,:] = pos_t
+                        logl[i]    = logl_t
+                    else:
+                        chain[i,:] = pv[i-1,:]
+                        logl[i]    = logl[i-1]
+
+                if return_cm:
+                    covs.append(cov(chain[:,0], chain[:,1]))
+                else:
+                    covs.append(sqrt(cov(chain[:,0], chain[:,1]).diagonal()))
+
+            elif do_mc:
                 us = uniform(qc[0]-sf*s1,qc[0]+sf*s1,size=n_mc_samples)
                 vs = uniform(qc[1]-sf*s2,qc[1]+sf*s2,size=n_mc_samples)
                 lls = array([self.lnlike_qd([_u,_v], flt=iflt) for _u,_v in zip(us,vs)])
@@ -224,7 +248,6 @@ class LDPSet(object):
         return self._mean
 
     @property
-
     def profile_uncertainties(self):
         return self._std
 
