@@ -4,6 +4,7 @@ import pyfits as pf
 from glob import glob
 from ftplib import FTP
 from itertools import product
+from functools import partial
 from os.path import exists, join, basename
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
@@ -13,7 +14,7 @@ from scipy.optimize import fmin
 
 from ldtool import ldtk_cache, with_notebook
 
-from ld_models import QuadraticModel as QDM
+from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel 
 
 ## Set up some constants
 ## ---------------------
@@ -43,12 +44,6 @@ def v_from_poly(lf, x0, dx=1e-3, nx=5):
     x0  = p.deriv(1).r
     var = -1./p.deriv(2)(x0)
     return var
-
-
-def quadratic_law(mu,ld):
-    """Quadratic limb-darkening law as  described in (Mandel & Agol, 2001).
-    """
-    return 1. - ld[0]*(1.-mu) - ld[1]*(1.-mu)**2
 
 
 def inside(a,lims):
@@ -175,6 +170,16 @@ class LDPSet(object):
         self._lnc1    = -0.5*self._nmu*log(TWO_PI)              ## 1st ln likelihood term
         self.set_uncertainty_multiplier(1.)
 
+        self.lnlike_ln = partial(self._lnlike, ldmodel=LinearModel)
+        self.lnlike_qd = partial(self._lnlike, ldmodel=QuadraticModel)
+        self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
+        self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
+
+        self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
+
 
     def set_uncertainty_multiplier(self, em):
         self._em      = em                                      ## uncertainty multiplier
@@ -197,7 +202,7 @@ class LDPSet(object):
                 chain = zeros([n_mc_samples,2])
                 
                 chain[0,:] = qc
-                logl[0]    = self.lnlike_qd(chain[0], flt=0)
+                logl[0]    = self.lnlike_qd(chain[0], flt=iflt)
 
                 for i in xrange(1,n_mc_samples):
                     pos_t  = multivariate_normal(chain[i-1], [[s1**2,0.0],[0.0,s2**2]])
@@ -225,14 +230,14 @@ class LDPSet(object):
         return array(qcs), array(covs)
 
             
-    def lnlike_qd(self, ldcs, joint=True, flt=None):
-        if not flt:
-            for fid, ldc in enumerate(asarray(ldcs).reshape([-1,2])):
-                model = QDM.evaluate(self._mu, ldc)
+    def _lnlike(self, ldcs, joint=True, flt=None, ldmodel=QuadraticModel):
+        if flt is None:
+            for fid, ldc in enumerate(asarray(ldcs).reshape([self._nfilters,-1])):
+                model = ldmodel.evaluate(self._mu, ldc)
                 self._lnl[fid] = self._lnc1 + self._lnc2[fid] -0.5*((self._mean[fid]-model)**2/self._err2[fid]).sum()
             return self._lnl.sum() if joint else self._lnl
         else:
-            model = QDM.evaluate(self._mu, asarray(ldcs))
+            model = ldmodel.evaluate(self._mu, asarray(ldcs))
             self._lnl[flt] = self._lnc1 + self._lnc2[flt] -0.5*((self._mean[flt]-model)**2/self._err2[flt]).sum()
             return self._lnl[flt]
 
