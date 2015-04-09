@@ -77,7 +77,7 @@ class GeneralModel(LDModel):
     
     @classmethod
     def evaluate(cl,mu,pv):
-        return 1. - np.sum([c*(1.-mu**i) for i,c in enumerate(pv)])
+        return 1. - np.sum([c*(1.-mu**(i+1)) for i,c in enumerate(pv)], 0)
 
 
 models = {'linear':    LinearModel,    

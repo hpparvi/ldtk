@@ -221,19 +221,21 @@ class LDPSet(object):
         self._err2    = [(em*e)**2 for e in self._std]          ## variances
 
 
-    def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25, return_chain=False, ldmodel=QuadraticModel):
-        qcs  = [fmin(lambda pv:-self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1*ones(ldmodel.npar), disp=0) for iflt in range(self._nfilters)]
+    def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
+                ldmodel=QuadraticModel, ngc=4):
+        npar = ldmodel.npar or ngc
+        qcs  = [fmin(lambda pv:-self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1*ones(npar), disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
-            s = zeros(ldmodel.npar)
-            for ic in range(ldmodel.npar):
+            s = zeros(npar)
+            for ic in range(npar):
                 s[ic] = (1./sqrt(-dx2(lambda x:self._lnlike(x, flt=iflt, ldmodel=ldmodel), qc, 1e-5, dim=ic)))
 
             ## Simple MCMC uncertainty estimation
             ## ----------------------------------
             if do_mc:
                 logl  = zeros(n_mc_samples)
-                chain = zeros([n_mc_samples,ldmodel.npar])
+                chain = zeros([n_mc_samples,npar])
                 
                 chain[0,:] = qc
                 logl[0]    = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
@@ -253,11 +255,11 @@ class LDPSet(object):
                 if return_cm:
                     covs.append(cov(ch, rowvar=0))
                 else:
-                    covs.append(sqrt(cov(ch, rowvar=0)) if ldmodel.npar == 1 else sqrt(cov(ch, rowvar=0).diagonal()))
+                    covs.append(sqrt(cov(ch, rowvar=0)) if npar == 1 else sqrt(cov(ch, rowvar=0).diagonal()))
 
             else:
                 if return_cm:
-                    covs.append(s**2 if ldmodel.npar == 1 else diag(s**2))
+                    covs.append(s**2 if npar == 1 else diag(s**2))
                 else:
                     covs.append(s)
 
