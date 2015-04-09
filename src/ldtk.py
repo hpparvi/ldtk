@@ -1,3 +1,22 @@
+"""
+Limb darkening toolkit
+Copyright (C) 2015  Hannu Parviainen <hpparvi@gmail.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+"""
+
 import os
 import pyfits as pf
 
@@ -7,14 +26,14 @@ from itertools import product
 from functools import partial
 from os.path import exists, join, basename
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
-                   poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
+                   diag, poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform, multivariate_normal
 from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.optimize import fmin
 
 from ldtool import ldtk_cache, with_notebook
+from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
-from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel 
 
 ## Set up some constants
 ## ---------------------
@@ -31,6 +50,11 @@ if with_notebook:
 def dxdx(f, x, h):
     return (f(x+h) - 2*f(x) + f(x-h)) / h**2
 
+def dx2(f, x0, h, dim):
+    xp,xm = array(x0), array(x0)
+    xp[dim] += h
+    xm[dim] -= h
+    return (f(xp) - 2*f(x0) + f(xm)) / h**2
 
 def dxdy(f,x,y,h=1e-5):
     return ((f([x+h,y+h])-f([x+h,y-h]))-(f([x-h,y+h])-f([x-h,y-h])))/(4*h**2)
@@ -164,7 +188,7 @@ class LDPSet(object):
         self._mean     = ldp
         self._std      = ldp_s
         self._nmu      = mu.size
-        self._samples  = {}
+        self._samples  = {m.abbr:[] for m in models.values()}
 
         self._lnl     = zeros(self._nfilters)
         self._lnc1    = -0.5*self._nmu*log(TWO_PI)              ## 1st ln likelihood term
@@ -175,10 +199,20 @@ class LDPSet(object):
         self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
         self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
 
+        self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
+        self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
+        self.coeffs_nl = partial(self._coeffs, ldmodel=NonlinearModel)
+        self.coeffs_ge = partial(self._coeffs, ldmodel=GeneralModel)
+
         self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
+
+        self.lnlike_ln.__doc__ = "Estimate the linear limb darkening model coefficients"
+        self.lnlike_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients"
+        self.lnlike_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients"
+        self.lnlike_ge.__doc__ = "Estimate the general limb darkening model coefficients"
 
 
     def set_uncertainty_multiplier(self, em):
@@ -187,45 +221,45 @@ class LDPSet(object):
         self._err2    = [(em*e)**2 for e in self._std]          ## variances
 
 
-    def coeffs_qd(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25, return_chain=False):
-        qcs  = [fmin(lambda pv:-self.lnlike_qd(pv, flt=iflt), [0.2,0.1], disp=0) for iflt in range(self._nfilters)]
+    def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25, return_chain=False, ldmodel=QuadraticModel):
+        qcs  = [fmin(lambda pv:-self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1*ones(ldmodel.npar), disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
-            s1 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([x,qc[1]], flt=iflt), qc[0], 1e-5))
-            s2 = 1/sqrt(-dxdx(lambda x:self.lnlike_qd([qc[0],x], flt=iflt), qc[1], 1e-5))
+            s = zeros(ldmodel.npar)
+            for ic in range(ldmodel.npar):
+                s[ic] = (1./sqrt(-dx2(lambda x:self._lnlike(x, flt=iflt, ldmodel=ldmodel), qc, 1e-5, dim=ic)))
 
             ## Simple MCMC uncertainty estimation
             ## ----------------------------------
             if do_mc:
-                self._samples['quadratic'] = []
                 logl  = zeros(n_mc_samples)
-                chain = zeros([n_mc_samples,2])
+                chain = zeros([n_mc_samples,ldmodel.npar])
                 
                 chain[0,:] = qc
-                logl[0]    = self.lnlike_qd(chain[0], flt=iflt)
+                logl[0]    = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
 
                 for i in xrange(1,n_mc_samples):
-                    pos_t  = multivariate_normal(chain[i-1], [[s1**2,0.0],[0.0,s2**2]])
-                    logl_t = self.lnlike_qd(pos_t, flt=iflt)
+                    pos_t  = multivariate_normal(chain[i-1], diag(s**2))
+                    logl_t = self._lnlike(pos_t, flt=iflt, ldmodel=ldmodel)
                     if uniform() < exp(logl_t-logl[i-1]):
                         chain[i,:] = pos_t
                         logl[i]    = logl_t
                     else:
                         chain[i,:] = chain[i-1,:]
                         logl[i]    = logl[i-1]
-                self._samples['quadratic'].append(chain)
+                self._samples[ldmodel.abbr].append(chain)
                 ch = chain[mc_burn::mc_thin,:]
 
                 if return_cm:
-                    covs.append(cov(ch[:,0], ch[:,1]))
+                    covs.append(cov(ch, rowvar=0))
                 else:
-                    covs.append(sqrt(cov(ch[:,0], ch[:,1]).diagonal()))
+                    covs.append(sqrt(cov(ch, rowvar=0)) if ldmodel.npar == 1 else sqrt(cov(ch, rowvar=0).diagonal()))
 
             else:
                 if return_cm:
-                    covs.append([[s1**2,0],[0,s2**2]])
+                    covs.append(s**2 if ldmodel.npar == 1 else diag(s**2))
                 else:
-                    covs.append([s1,s2])
+                    covs.append(s)
 
         return array(qcs), array(covs)
 
@@ -245,6 +279,7 @@ class LDPSet(object):
     @property
     def profile_averages(self):
         return self._mean
+
 
     @property
     def profile_uncertainties(self):
