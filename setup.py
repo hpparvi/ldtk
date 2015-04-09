@@ -2,13 +2,10 @@ from numpy.distutils.core import setup, Extension
 from numpy.distutils.misc_util import Configuration
 import distutils.sysconfig as ds
 
-#with open('README.rst') as file:
-#    long_description = file.read()
-
 long_description = ''
 
 setup(name='LDTk',
-      version='0.5',
+      version='0.9',
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description=long_description,
       author='Hannu Parviainen',

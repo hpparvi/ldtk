@@ -34,18 +34,21 @@ from scipy.optimize import fmin
 from ldtool import ldtk_cache, with_notebook
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
+if with_notebook:
+    from IPython.display import display, clear_output
+    from IPython.html.widgets import IntProgressWidget
 
-## Set up some constants
-## ---------------------
+## Constants
+## =========
+
 TWO_PI      = 2*pi
 TEFF_POINTS = delete(arange(2300,12001,100), [27])
 LOGG_POINTS = arange(0,6.1,0.5)
 Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, 0, 0.5, 1.0])
 
-if with_notebook:
-    from IPython.display import display, clear_output
-    from IPython.html.widgets import IntProgressWidget
 
+## Utility functions
+## =================
 
 def dxdx(f, x, h):
     return (f(x+h) - 2*f(x) + f(x-h)) / h**2
@@ -59,7 +62,6 @@ def dx2(f, x0, h, dim):
 def dxdy(f,x,y,h=1e-5):
     return ((f([x+h,y+h])-f([x+h,y-h]))-(f([x-h,y+h])-f([x-h,y-h])))/(4*h**2)
 
-
 def v_from_poly(lf, x0, dx=1e-3, nx=5):
     """Estimates the variance of a log distribution approximating it as a normal distribution."""
     xs  = linspace(x0-dx, x0+dx, nx)
@@ -69,14 +71,17 @@ def v_from_poly(lf, x0, dx=1e-3, nx=5):
     var = -1./p.deriv(2)(x0)
     return var
 
-
-def inside(a,lims):
+def is_inside(a,lims):
+    """Is a value inside the limits"""
     return a[(a>=lims[0])&(a<=lims[1])]
 
 
 def a_lims(a,v,e,s=3):
     return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
 
+
+## Main classes
+## ============
 
 class SpecIntFile(object):
     def __init__(self, teff, logg, z):
@@ -120,13 +125,13 @@ class Client(object):
     
     def set_limits(self, teff_lims, logg_lims, z_lims):
         self.teffl = teff_lims
-        self.teffs = inside(TEFF_POINTS, teff_lims)
+        self.teffs = is_inside(TEFF_POINTS, teff_lims)
         self.nteff = len(self.teffs)
         self.loggl = logg_lims
-        self.loggs = inside(LOGG_POINTS, logg_lims)
+        self.loggs = is_inside(LOGG_POINTS, logg_lims)
         self.nlogg = len(self.loggs)
         self.zl    = z_lims
-        self.zs    = inside(Z_POINTS, z_lims)
+        self.zs    = is_inside(Z_POINTS, z_lims)
         self.nz    = len(self.zs)
         self.pars  = [p for p in product(self.teffs,self.loggs,self.zs)]
         self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
@@ -209,10 +214,10 @@ class LDPSet(object):
         self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
 
-        self.lnlike_ln.__doc__ = "Estimate the linear limb darkening model coefficients"
-        self.lnlike_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients"
-        self.lnlike_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients"
-        self.lnlike_ge.__doc__ = "Estimate the general limb darkening model coefficients"
+        self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details." 
+        self.coeffs_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
+        self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
+        self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
 
 
     def set_uncertainty_multiplier(self, em):
@@ -223,6 +228,24 @@ class LDPSet(object):
 
     def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
                 ldmodel=QuadraticModel, ngc=4):
+        """
+        Estimate the limb darkening coefficients and their uncertainties for a given limb darkening  model.
+
+        Parameters
+
+          return_cm    bool     returns the full covariance matrix if set true, otherwise returns
+                                the std of the likelihood distribution for each parameter.
+
+          do_mc        bool     estimates the coefficient uncertainties using MCMC sampling
+
+          n_mc_samples int      number of MCMC iterations to run if MCMC is used
+
+          mc_thin      int      MCMC chain thinning factor
+
+          mc_burn      int      MCMC chain burn in
+
+          ldmodel      LDModel  limb darkening model to fit
+        """
         npar = ldmodel.npar or ngc
         qcs  = [fmin(lambda pv:-self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1*ones(npar), disp=0) for iflt in range(self._nfilters)]
         covs = []
@@ -358,8 +381,8 @@ class LDPSetCreator(object):
 
 
 
-## UTILITY CLASSES
-## ---------------
+## Utility classes
+## ===============
 
 class SpectralIP(object):
     def __init__(self, dfile):
