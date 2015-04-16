@@ -23,6 +23,8 @@ lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log likel
 lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quadratic law log likelihood for the first filter
 ```
 
+![](notebooks/example_profiles.png)
+
 ## Overview
 
 ## Installation
