@@ -26,9 +26,10 @@ from itertools import product
 from functools import partial
 from os.path import exists, join, basename
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
-                   diag, poly1d, polyfit, vstack, cov, exp, log, sqrt, clip, pi)
+                   diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform, multivariate_normal
 from scipy.interpolate import RegularGridInterpolator as RGI
+from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
 from ldtool import ldtk_cache, with_notebook
@@ -189,15 +190,18 @@ class LDPSet(object):
         self._filters  = filters 
         self._nfilters = len(filters)
         self._mu       = mu
+        self._mu_orig  = mu.copy()
         self._z        = sqrt(1-mu**2)
+        self._z_orig   = self._z.copy()
         self._mean     = ldp
         self._std      = ldp_s
-        self._nmu      = mu.size
+        self._mean_orig= ldp.copy()
+        self._std_orig = ldp_s.copy()
         self._samples  = {m.abbr:[] for m in models.values()}
 
         self._lnl     = zeros(self._nfilters)
-        self._lnc1    = -0.5*self._nmu*log(TWO_PI)              ## 1st ln likelihood term
         self.set_uncertainty_multiplier(1.)
+        self._update()
 
         self.lnlike_ln = partial(self._lnlike, ldmodel=LinearModel)
         self.lnlike_qd = partial(self._lnlike, ldmodel=QuadraticModel)
@@ -220,10 +224,45 @@ class LDPSet(object):
         self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
 
 
+    def _update(self):
+        self._nmu      = self._mu.size
+        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                   ## 1st ln likelihood term
+        self._lnc2    = [-log(self._em*e).sum() for e in self._std]   ## 2nd ln likelihood term
+        self._err2    = [(self._em*e)**2 for e in self._std]          ## variances
+
+
     def set_uncertainty_multiplier(self, em):
         self._em      = em                                      ## uncertainty multiplier
-        self._lnc2    = [-log(em*e).sum() for e in self._std]   ## 2nd ln likelihood term
-        self._err2    = [(em*e)**2 for e in self._std]          ## variances
+        self._update()
+        
+
+    def reset_sampling(self):
+        self._mu   = self._mu_orig.copy()
+        self._z    = self._z_orig.copy()
+        self._mean = self._mean_orig.copy()
+        self._std  = self._std_orig.copy()
+        self._update()
+
+
+    def resample_linear_z(self, nz=100):
+        self.resample(z=linspace(0,1,nz))
+ 
+
+    def resample_linear_mu(self, nmu=100):
+        self.resample(mu=linspace(0,1,nmu))
+     
+
+    def resample(self, mu=None, z=None):
+        if z is not None:
+            self._z  = z
+            self._mu = sqrt(1-self._z**2) 
+        elif mu is not None:
+            self._mu = mu
+            self._z  = sqrt(1-self._mu**2) 
+
+        self._mean = array([interp1d(self._mu_orig, f, kind='cubic')(self._mu) for f in self._mean_orig])
+        self._std  = array([interp1d(self._mu_orig, f, kind='cubic')(self._mu) for f in self._std_orig])
+        self._update()
 
 
     def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
@@ -339,11 +378,11 @@ class LDPSetCreator(object):
             dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
             nwl  = hdul[0].header['naxis1']        # Number of wl samples
             wl   = wl0 + arange(nwl)*dwl
-            self.mu_orig   = hdul[1].data
-            self.z_orig    = sqrt(1-self.mu_orig**2)
-            self.nmu_orig  = self.mu_orig.size
+            self.mu   = hdul[1].data
+            self.z    = sqrt(1-self.mu**2)
+            self.nmu  = self.mu.size
         
-        self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu_orig])
+        self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu])
         for fid,f in enumerate(self.filters):
             w = f(wl) * self.qe(wl)
             for did,df in enumerate(self.files):
@@ -352,28 +391,35 @@ class LDPSetCreator(object):
 
         ## Create n_filter interpolator objects
         ##
-        self.itps = [RGI((c.teffs, c.loggs, c.zs, self.mu_orig), 
-                         self.fluxes[i,:,:].reshape([c.nteff, c.nlogg, c.nz, self.nmu_orig])) for i in range(self.nfilters)]
+        self.itps = [RGI((c.teffs, c.loggs, c.zs, self.mu), 
+                         self.fluxes[i,:,:].reshape([c.nteff, c.nlogg, c.nz, self.nmu])) for i in range(self.nfilters)]
         
-        self.z  = linspace(0,0.995,self.nmu_orig)
-        self.mu = sqrt(1-self.z**2)
-        self.nmu = self.mu.size
-       
 
-    def create_profiles(self, nsamples=20):
+    def create_profiles(self, nsamples=20, mode=0, nmu=100):
         self.vals = zeros([self.nfilters, nsamples, self.nmu])
+        a = ones([self.nmu,4])
+        a[:,3] = self.mu
+
         for iflt in range(self.nfilters):
             for ismp in range(nsamples):
-                a = ones([self.nmu,4])
                 a[:,0] = clip(normal(*self.teff),  *self.client.teffl)
                 a[:,1] = clip(normal(*self.logg),  *self.client.loggl)
                 a[:,2] = clip(normal(*self.metal), *self.client.zl)
-                a[:,3] = self.mu
                 self.vals[iflt,ismp,:] = self.itps[iflt](a)
 
         ldp_m = array([self.vals[i,:,:].mean(0) for i in range(self.nfilters)])
         ldp_s = array([self.vals[i,:,:].std(0)  for i in range(self.nfilters)])
-        return LDPSet(self.filter_names, self.mu, ldp_m, ldp_s)
+
+        ## Clip the arrays and renormalise the z and mu ranges
+        ##
+        i = diff(ldp_m.mean(0)).argmax()
+        z  = self.z[i:] / self.z[i]
+        mu = sqrt(1-z**2) 
+
+        ldp_m = ldp_m[:,i:].copy()
+        ldp_s = ldp_s[:,i:].copy()
+
+        return LDPSet(self.filter_names, mu, ldp_m, ldp_s)
 
     @property
     def filter_names(self):
