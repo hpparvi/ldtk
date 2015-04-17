@@ -5,22 +5,22 @@ Python toolkit for calculating stellar limb darkening profiles and model-specifi
 from ldtk import LDPSetCreator, BoxcarFilter
 
 filters = [BoxcarFilter('a', 450, 550),  # Define your passbands
-           BoxcarFilter('b', 650, 750),  # - Boxcar filters useful in transmission spectroscopy
-           BoxcarFilter('c', 850, 950)]  # - Tabulated filters (transmission vs. wavelength)
+           BoxcarFilter('b', 650, 750),  # - Boxcar filters useful in 
+           BoxcarFilter('c', 850, 950)]  #   transmission spectroscopy
 
-sc = LDPSetCreator(teff=(5200, 100),     # Define your star, and the code downloads the
-                   logg=(4.50, 0.2),     # uncached stellar spectra from the Husser et al.
-                      z=(0.25, 0.05),    # FTP server automatically.
-                   filters=filters)      #
+sc = LDPSetCreator(teff=(5200, 100),     # Define your star, and the code
+                   logg=(4.50, 0.2),     # downloads the uncached stellar 
+                      z=(0.25, 0.05),    # spectra from the Husser et al.
+                   filters=filters)      # FTP server automatically.
 
-ps = sc.create_profiles()                # Create the limb darkening profiles with uncertainties
-cq,eq = ps.coeffs_qd(use_mc=True)        # Estimate quadratic law coefficients with uncertainties
+ps = sc.create_profiles()                # Create the limb darkening profiles
+cq,eq = ps.coeffs_qd(use_mc=True)        # Estimate quadratic law coefficients
 
-lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log likelihood for a given
-                      [0.35,0.10],       # set of coefficients (returns the joint likelihood for
-                      [0.25,0.05]])      # all filters)
+lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log 
+                      [0.35,0.10],       # likelihood for a set of coefficients 
+                      [0.25,0.05]])      # (returns the joint likelihood)
 
-lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quadratic law log likelihood for the first filter
+lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quad. law log L for the first filter
 ```
 
 ![](notebooks/example_profiles.png)
