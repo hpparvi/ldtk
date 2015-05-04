@@ -14,7 +14,7 @@ try:
     from IPython.html.widgets import IntProgressWidget
     w = IntProgressWidget()
     with_notebook = True
-except AttributeError:
+except (ImportError,AttributeError):
     with_notebook = False
 
 from ldtk import LDPSetCreator, LDPSet
