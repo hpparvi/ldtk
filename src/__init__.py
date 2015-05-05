@@ -9,14 +9,6 @@ if not exists(ldtk_root):
 if not exists(ldtk_cache):
     os.mkdir(ldtk_cache)
 
-try:
-    from IPython.display import display, clear_output
-    from IPython.html.widgets import IntProgressWidget
-    w = IntProgressWidget()
-    with_notebook = True
-except (ImportError,AttributeError):
-    with_notebook = False
-
 from ldtk import LDPSetCreator, LDPSet
 from ldtool.filters import BoxcarFilter, TabulatedFilter
 

@@ -35,10 +35,6 @@ from scipy.optimize import fmin
 from ldtool import ldtk_cache, with_notebook
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
-if with_notebook:
-    from IPython.display import display, clear_output
-    from IPython.html.widgets import IntProgressWidget
-
 ## Constants
 ## =========
 
@@ -152,12 +148,6 @@ class Client(object):
         return [f in efiles for f in (files or self.files)]
     
     def download_uncached_files(self, force=False):
-        if with_notebook:
-            pbar = IntProgressWidget()
-            if (self.verbosity > 0) & (self.not_cached > 0):
-                display(pbar)
-            pbar.max = max(1, self.not_cached if not force else len(self.files))
-
         ftp = FTP(self.eftp)
         ftp.login()
         ftp.cwd(self.edir)
@@ -171,15 +161,11 @@ class Client(object):
                 localfile.close()
                 ftp.cwd('..')
                 self.not_cached -= 1
-                if with_notebook:
-                    pbar.value += 1
             else:
                 if self.verbosity > 1:
                     print 'Skipping an existing file: ', f.name
         ftp.close()
-        if with_notebook:
-            pbar.value = pbar.max
-
+ 
     @property
     def local_filenames(self):
         return [f.local_path for f in self.files]
