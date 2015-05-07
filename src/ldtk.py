@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import os
+from os.path import join, exists
 import pyfits as pf
 
 from glob import glob
@@ -32,8 +33,16 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-from ldtk import ldtk_cache, with_notebook
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
+
+ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
+ldtk_cache = join(ldtk_root,'cache')
+
+if not exists(ldtk_root):
+    os.mkdir(ldtk_root)
+if not exists(ldtk_cache):
+    os.mkdir(ldtk_cache)
+
 
 ## Constants
 ## =========
