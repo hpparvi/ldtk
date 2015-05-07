@@ -10,6 +10,6 @@ if not exists(ldtk_cache):
     os.mkdir(ldtk_cache)
 
 from ldtk import LDPSetCreator, LDPSet
-from ldtool.filters import BoxcarFilter, TabulatedFilter
+from ldtk.filters import BoxcarFilter, TabulatedFilter
 
 __all__ = ['LDPSetCreator','LDPSet','BoxcarFilter','TabulatedFilter']

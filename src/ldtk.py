@@ -32,7 +32,7 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-from ldtool import ldtk_cache, with_notebook
+from ldtk import ldtk_cache, with_notebook
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
 ## Constants
