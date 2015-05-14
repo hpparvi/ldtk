@@ -17,7 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-from numpy import asarray, zeros_like, interp, loadtxt
+from numpy import array, argsort, zeros_like, interp, loadtxt
 
 class Filter(object):
     def __init__(self, name):
@@ -44,9 +44,14 @@ class TabulatedFilter(Filter):
         if isinstance(wl_or_fname,str):
             self.wl, self.tm = loadtxt(wl_or_fname).T
         else:
-            self.wl = asarray(wl)
-            self.tm = asarray(tm)
+            self.wl = array(wl_or_fname)
+            self.tm = array(tm)
         self.tm *= tmf
+
+        sid = argsort(self.wl)
+        self.wl = self.wl[sid]
+        self.tm = self.tm[sid]
+
 
     def __call__(self, wl):
         return interp(wl, self.wl, self.tm, 0., 0.)

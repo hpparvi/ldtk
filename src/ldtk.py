@@ -91,11 +91,13 @@ def a_lims(a,v,e,s=3):
 
 class SpecIntFile(object):
     def __init__(self, teff, logg, z):
-        tmpl = 'lte{teff:05d}-{logg:4.2f}-{z:3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
+        tmpl = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.teff = int(teff)
         self.logg = logg
         self.z    = z
         self.name  = tmpl.format(teff=self.teff, logg=self.logg, z=self.z)
+        if z < 1e-4:
+            self.name = self.name.replace('+0.0','-0.0')
         self._zstr = 'Z'+self.name[13:17]
         
     @property
@@ -109,7 +111,7 @@ class SpecIntFile(object):
     
 class Client(object):
     def __init__(self, limits=None, verbosity=1):
-        self.fnt = 'lte{teff:05d}-{logg:4.2f}-{z:3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
+        self.fnt = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
         self.files = None
@@ -127,8 +129,11 @@ class Client(object):
         return exists(self._local_path(teff_or_fn, logg, z))
         
     def create_name(self, teff, logg, z):
-        return self.fnt.format(teff=int(teff), logg=logg, z=z)
-    
+        name = self.fnt.format(teff=int(teff), logg=logg, z=z)
+        if z < 1e-4:
+            name = name.replace('+0.0','-0.0')
+        return name
+
     def set_limits(self, teff_lims, logg_lims, z_lims):
         self.teffl = teff_lims
         self.teffs = is_inside(TEFF_POINTS, teff_lims)
