@@ -25,6 +25,9 @@ lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quad. law log L for the first filter
 
 ![](notebooks/plots/example_profiles.png)
 ![](notebooks/plots/example_coefficients.png)
+
+...and the same, but for 19 narrow passbands...
+
 ![](notebooks/plots/qd_coeffs_narrow.png)
 
 ## Overview
