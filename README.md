@@ -47,6 +47,10 @@ Simple: clone the source from github and follow the basic Python package install
  python setup.py build install [--user]
 ```
 
+## Examples
+
+Examples for basic and more advanced usage can be found from the `notebooks` directory.
+
 ## Model coefficient estimation
 
 ## Log likelihood evaluation
