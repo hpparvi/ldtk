@@ -43,7 +43,7 @@ if not exists(ldtk_root):
 if not exists(ldtk_cache):
     os.mkdir(ldtk_cache)
 
-
+    
 ## Constants
 ## =========
 
@@ -430,9 +430,11 @@ class LDPSetCreator(object):
 ## Utility classes
 ## ===============
 
-class SpectralIP(object):
-    def __init__(self, dfile):
-        with pf.open(dfile) as hdul:
+class SIS(object):
+    """Simple wrapper for a specific intensity spectrum file."""
+    def __init__(self, fname):
+        self.filename = fname
+        with pf.open(fname) as hdul:
             self.wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
             self.dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
             self.nwl  = hdul[0].header['naxis1']        # Number of samples
@@ -441,7 +443,7 @@ class SpectralIP(object):
             self.z    = sqrt(1-self.mu**2)
             self.wl   = self.wl0 + arange(self.nwl)*self.dwl
                 
-    def intensity_profile(self, l0, l1):
+    def intensity_profile(self, l0=0, l1=1e5):
         ip = self.data[:,(self.wl>l0)&(self.wl<l1)].mean(1)
         return ip/ip[-1]
     
