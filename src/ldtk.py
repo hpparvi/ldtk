@@ -30,8 +30,10 @@ from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, on
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform, multivariate_normal
 from scipy.interpolate import RegularGridInterpolator as RGI
+from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
+from itertools import product
 
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
@@ -391,21 +393,20 @@ class LDPSetCreator(object):
 
         ## Create n_filter interpolator objects
         ##
-        self.itps = [RGI((c.teffs, c.loggs, c.zs, self.mu), 
-                         self.fluxes[i,:,:].reshape([c.nteff, c.nlogg, c.nz, self.nmu])) for i in range(self.nfilters)]
+        points = array([p for p in product(c.teffs, c.loggs, c.zs)])
+        self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
+         
         
 
     def create_profiles(self, nsamples=20, mode=0, nmu=100):
         self.vals = zeros([self.nfilters, nsamples, self.nmu])
-        a = ones([self.nmu,4])
-        a[:,3] = self.mu
-
+        samples = ones([nsamples,3])
+        samples[:,0] = clip(normal(*self.teff,  size=nsamples), *self.client.teffl)
+        samples[:,1] = clip(normal(*self.logg,  size=nsamples), *self.client.loggl)
+        samples[:,2] = clip(normal(*self.metal, size=nsamples), *self.client.zl)
+                
         for iflt in range(self.nfilters):
-            for ismp in range(nsamples):
-                a[:,0] = clip(normal(*self.teff),  *self.client.teffl)
-                a[:,1] = clip(normal(*self.logg),  *self.client.loggl)
-                a[:,2] = clip(normal(*self.metal), *self.client.zl)
-                self.vals[iflt,ismp,:] = self.itps[iflt](a)
+            self.vals[iflt,:,:] = self.itps[iflt](samples)
 
         ldp_m = array([self.vals[i,:,:].mean(0) for i in range(self.nfilters)])
         ldp_s = array([self.vals[i,:,:].std(0)  for i in range(self.nfilters)])
