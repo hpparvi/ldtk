@@ -18,13 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import pyfits as pf
-from itertools import product
 from functools import partial
-from os.path import exists, join, basename
-from cPickle import dump, load
-from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
-                   diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
-from numpy.random import normal, uniform, multivariate_normal
 from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
@@ -33,21 +27,35 @@ from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel,
 from client import Client
 from core import *
 
+
+def load_ldpset(filename):
+    with open(filename,'r') as fin:
+        return LDPSet(load(fin), load(fin), load(fin))
+
+
 ## Main classes
 ## ============        
 class LDPSet(object):
-    def __init__(self, filters, mu, ldp, ldp_s):
+    def __init__(self, filters, mu, ldp_samples):
         self._filters  = filters 
         self._nfilters = len(filters)
         self._mu       = mu
-        self._mu_orig  = mu.copy()
         self._z        = sqrt(1-mu**2)
-        self._z_orig   = self._z.copy()
-        self._mean     = ldp
-        self._std      = ldp_s
-        self._mean_orig= ldp.copy()
-        self._std_orig = ldp_s.copy()
+        self._ldps     = ldp_samples
+        self._mean     = array([ldp_samples[i,:,:].mean(0) for i in range(self._nfilters)])
+        self._std      = array([ldp_samples[i,:,:].std(0)  for i in range(self._nfilters)])
         self._samples  = {m.abbr:[] for m in models.values()}
+
+        self._ldps_orig = self._ldps.copy()
+        self._mu_orig   = self._mu.copy()
+        self._z_orig    = self._z.copy()
+        self._mean_orig = self._mean.copy()
+        self._std_orig  = self._std.copy()
+
+        self._limb_i   = abs(diff(self._mean.mean(0))).argmax()
+        self._limb_z   = self._z[i]
+        self._limb_mu  = sqrt(1.-self._z[i]**2)
+        self.redefine_limb()
 
         self._lnl     = zeros(self._nfilters)
         self.set_uncertainty_multiplier(1.)
@@ -73,24 +81,50 @@ class LDPSet(object):
         self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
 
+        
+    def save(self, filename):
+        with open(filename,'w') as f:
+            dump(self._filters, f)
+            dump(self._mu_orig, f)
+            dump(self._ldps_orig, f)
+
 
     def _update(self):
         self._nmu      = self._mu.size
-        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                   ## 1st ln likelihood term
+        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                    ## 1st ln likelihood term
         self._lnc2    = [-log(self._em*e).sum() for e in self._std]   ## 2nd ln likelihood term
         self._err2    = [(self._em*e)**2 for e in self._std]          ## variances
 
 
+    def set_limb_z(self, z):
+        self._limb_z = z
+        self._limb_i = argmin(abs(self._z_orig-z))
+        self._limb_mu = sqrt(1.-z**2)
+        self.reset_sampling()
+
+
+    def set_limb_mu(self, mu):
+        self._limb_mu = mu
+        self._limb_i  = argmin(abs(self._mu_orig-mu))
+        self._limb_z = sqrt(1.-mu**2) 
+        self.reset_sampling()
+
+
+    def redefine_limb(self):
+        self._z  = self._z_orig[self._limb_i:] / self._limb_z
+        self._mu = sqrt(1.-self._z**2) 
+        self._ldps = self._ldps_orig[:,:,self._limb_i:].copy()
+        self._mean = self._mean_orig[:,self._limb_i:].copy()
+        self._std  = self._std_orig[:,self._limb_i:].copy()
+
+
     def set_uncertainty_multiplier(self, em):
-        self._em      = em                                      ## uncertainty multiplier
+        self._em      = em
         self._update()
         
 
     def reset_sampling(self):
-        self._mu   = self._mu_orig.copy()
-        self._z    = self._z_orig.copy()
-        self._mean = self._mean_orig.copy()
-        self._std  = self._std_orig.copy()
+        self.redefine_limb()
         self._update()
 
 
@@ -103,6 +137,7 @@ class LDPSet(object):
      
 
     def resample(self, mu=None, z=None):
+        muc = self._mu.copy()
         if z is not None:
             self._z  = z
             self._mu = sqrt(1-self._z**2) 
@@ -110,8 +145,8 @@ class LDPSet(object):
             self._mu = mu
             self._z  = sqrt(1-self._mu**2) 
 
-        self._mean = array([interp1d(self._mu_orig, f, kind='cubic')(self._mu) for f in self._mean_orig])
-        self._std  = array([interp1d(self._mu_orig, f, kind='cubic')(self._mu) for f in self._std_orig])
+        self._mean = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._mean])
+        self._std  = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
         self._update()
 
 
@@ -248,30 +283,17 @@ class LDPSetCreator(object):
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
          
         
-
     def create_profiles(self, nsamples=20, mode=0, nmu=100):
-        self.vals = zeros([self.nfilters, nsamples, self.nmu])
+        self.ldp_samples = zeros([self.nfilters, nsamples, self.nmu])
         samples = ones([nsamples,3])
         samples[:,0] = clip(normal(*self.teff,  size=nsamples), *self.client.teffl)
         samples[:,1] = clip(normal(*self.logg,  size=nsamples), *self.client.loggl)
         samples[:,2] = clip(normal(*self.metal, size=nsamples), *self.client.zl)
                 
         for iflt in range(self.nfilters):
-            self.vals[iflt,:,:] = self.itps[iflt](samples)
+            self.ldp_samples[iflt,:,:] = self.itps[iflt](samples)
 
-        ldp_m = array([self.vals[i,:,:].mean(0) for i in range(self.nfilters)])
-        ldp_s = array([self.vals[i,:,:].std(0)  for i in range(self.nfilters)])
-
-        ## Clip the arrays and renormalise the z and mu ranges
-        ##
-        i = diff(ldp_m.mean(0)).argmax()
-        z  = self.z[i:] / self.z[i]
-        mu = sqrt(1-z**2) 
-
-        ldp_m = ldp_m[:,i:].copy()
-        ldp_s = ldp_s[:,i:].copy()
-
-        return LDPSet(self.filter_names, mu, ldp_m, ldp_s)
+        return LDPSet(self.filter_names, self.mu, self.ldp_samples)
 
     @property
     def filter_names(self):
