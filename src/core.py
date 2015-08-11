@@ -63,6 +63,7 @@ TWO_PI      = 2*pi
 TEFF_POINTS = delete(arange(2300,12001,100), [27])
 LOGG_POINTS = arange(0,6.1,0.5)
 Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, -0.0, 0.5, 1.0])
+FN_TEMPLATE = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
 
 ## Utility functions
 ## =================
@@ -112,3 +113,54 @@ def is_inside(a,lims):
 
 def a_lims(a,v,e,s=3):
     return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
+
+## Utility classes
+## ===============
+class SpecIntFile(object):
+    def __init__(self, teff, logg, z):
+        self.teff = int(teff)
+        self.logg = logg
+        self.z    = z
+        self.name  = FN_TEMPLATE.format(teff=self.teff, logg=self.logg, z=self.z)
+        self._zstr = 'Z'+self.name[13:17]
+        
+    @property
+    def local_path(self):
+        return join(ldtk_cache,self._zstr,self.name)
+
+    @property
+    def local_exists(self):
+        return exists(self.local_path)
+
+
+class SIS(object):
+    """Simple wrapper for a specific intensity spectrum file."""
+    def __init__(self, fname):
+        self.filename = fname
+        with pf.open(fname) as hdul:
+            self.wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
+            self.dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
+            self.nwl  = hdul[0].header['naxis1']        # Number of samples
+            self.data = hdul[0].data
+            self.mu   = hdul[1].data
+            self.z    = sqrt(1-self.mu**2)
+            self.wl   = self.wl0 + arange(self.nwl)*self.dwl
+                
+    def intensity_profile(self, l0=0, l1=1e5):
+        ip = self.data[:,(self.wl>l0)&(self.wl<l1)].mean(1)
+        return ip/ip[-1]
+    
+    
+class IntegratedIP(object):
+    def __init__(self, dfile, l0, l1):
+        with pf.open(dfile) as hdul:
+            wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
+            dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
+            nwl  = hdul[0].header['naxis1']        # Number of wl samples
+            wl   = wl0 + arange(nwl)*dwl
+            msk  = (wl > l0) & (wl < l1)
+            
+            self.flux  = hdul[0].data[:,msk].mean(1)
+            self.flux /= self.flux[-1]
+            self.mu   = hdul[1].data
+            self.z    = sqrt(1-self.mu**2)

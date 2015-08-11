@@ -20,29 +20,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from ftplib import FTP
 from itertools import product
 from core import *
-
-
-class SpecIntFile(object):
-    def __init__(self, teff, logg, z):
-        tmpl = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
-        self.teff = int(teff)
-        self.logg = logg
-        self.z    = z
-        self.name  = tmpl.format(teff=self.teff, logg=self.logg, z=self.z)
-        self._zstr = 'Z'+self.name[13:17]
-        
-    @property
-    def local_path(self):
-        return join(ldtk_cache,self._zstr,self.name)
-
-    @property
-    def local_exists(self):
-        return exists(self.local_path)
     
     
 class Client(object):
     def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
-        self.fnt = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
         self.files = None
@@ -73,7 +54,7 @@ class Client(object):
 
     def create_name(self, teff, logg, z):
         """Creates a SPECINT filename given teff, logg, and z."""
-        return self.fnt.format(teff=int(teff), logg=logg, z=z)
+        return FN_TEMPLATE.format(teff=int(teff), logg=logg, z=z)
 
 
     def set_limits(self, teff_lims, logg_lims, z_lims):
