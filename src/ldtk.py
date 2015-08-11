@@ -17,13 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-import os
-from os.path import join, exists
-import warnings
 import pyfits as pf
-
-from glob import glob
-from ftplib import FTP
 from itertools import product
 from functools import partial
 from os.path import exists, join, basename
@@ -31,231 +25,16 @@ from cPickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform, multivariate_normal
-from scipy.interpolate import RegularGridInterpolator as RGI
 from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
-from itertools import product
 
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
-
-## Test if we're running inside IPython
-## ------------------------------------
-try:
-    __IPYTHON__
-    from IPython.display import display, HTML
-    with_ipython = True
-except NameError:
-    with_ipython = False
-
-warnings.filterwarnings('ignore')
-with warnings.catch_warnings():
-    try:
-        from IPython.display import display, clear_output
-        from IPython.html.widgets import IntProgress
-        w = IntProgress()
-        with_notebook = True
-    except AttributeError:
-        with_notebook = False
-
-ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
-ldtk_cache = join(ldtk_root,'cache')
-ldtk_server_file_list = join(ldtk_root, 'server_file_list.pkl')
-
-if not exists(ldtk_root):
-    os.mkdir(ldtk_root)
-if not exists(ldtk_cache):
-    os.mkdir(ldtk_cache)
-    
-## Constants
-## =========
-
-TWO_PI      = 2*pi
-TEFF_POINTS = delete(arange(2300,12001,100), [27])
-LOGG_POINTS = arange(0,6.1,0.5)
-Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, -0.0, 0.5, 1.0])
-
-## Utility functions
-## =================
-
-def message(text):
-    if with_ipython:
-        display(HTML(text))
-    else:
-        print text
-
-class ProgressBar(object):
-    def __init__(self, max_v):
-        if with_notebook:
-            self.pb = IntProgress(value=0, max=max_v)
-            display(self.pb)
-
-    def increase(self, v=1):
-        if with_notebook:
-            self.pb.value += v
-
-
-def dxdx(f, x, h):
-    return (f(x+h) - 2*f(x) + f(x-h)) / h**2
-
-def dx2(f, x0, h, dim):
-    xp,xm = array(x0), array(x0)
-    xp[dim] += h
-    xm[dim] -= h
-    return (f(xp) - 2*f(x0) + f(xm)) / h**2
-
-def dxdy(f,x,y,h=1e-5):
-    return ((f([x+h,y+h])-f([x+h,y-h]))-(f([x-h,y+h])-f([x-h,y-h])))/(4*h**2)
-
-def v_from_poly(lf, x0, dx=1e-3, nx=5):
-    """Estimates the variance of a log distribution approximating it as a normal distribution."""
-    xs  = linspace(x0-dx, x0+dx, nx)
-    fs  = array([lf(x) for x in xs])
-    p   = poly1d(polyfit(xs, fs, 2))
-    x0  = p.deriv(1).r
-    var = -1./p.deriv(2)(x0)
-    return var
-
-def is_inside(a,lims):
-    """Is a value inside the limits"""
-    return a[(a>=lims[0])&(a<=lims[1])]
-
-
-def a_lims(a,v,e,s=3):
-    return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
-
+from client import Client
+from core import *
 
 ## Main classes
-## ============
-
-class SpecIntFile(object):
-    def __init__(self, teff, logg, z):
-        tmpl = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
-        self.teff = int(teff)
-        self.logg = logg
-        self.z    = z
-        self.name  = tmpl.format(teff=self.teff, logg=self.logg, z=self.z)
-        self._zstr = 'Z'+self.name[13:17]
-        
-    @property
-    def local_path(self):
-        return join(ldtk_cache,self._zstr,self.name)
-
-    @property
-    def local_exists(self):
-        return exists(self.local_path)
-    
-    
-class Client(object):
-    def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
-        self.fnt = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
-        self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
-        self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
-        self.files = None
-        self.verbosity = verbosity
-
-        if exists(ldtk_server_file_list) and not update_server_file_list:
-            with open(ldtk_server_file_list, 'r') as fin:
-                self.files_in_server = load(fin)
-        else:
-            self.files_in_server = self.get_server_file_list()
-            with open(ldtk_server_file_list, 'w') as fout:
-                dump(self.files_in_server, fout)
-
-        if limits:
-            self.set_limits(*limits)
-
-
-    def _local_path(self, teff_or_fn, logg=None, z=None):
-        """Creates the path to the local version of the file."""
-        fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
-        return join(ldtk_cache,'Z'+fn[13:17],fn)
-        
-
-    def _local_exists(self, teff_or_fn, logg=None, z=None):
-        """Tests if a file exists in the local cache. """
-        return exists(self._local_path(teff_or_fn, logg, z))
-        
-
-    def create_name(self, teff, logg, z):
-        """Creates a SPECINT filename given teff, logg, and z."""
-        return self.fnt.format(teff=int(teff), logg=logg, z=z)
-
-
-    def set_limits(self, teff_lims, logg_lims, z_lims):
-        self.teffl = teff_lims
-        self.teffs = is_inside(TEFF_POINTS, teff_lims)
-        self.nteff = len(self.teffs)
-        self.loggl = logg_lims
-        self.loggs = is_inside(LOGG_POINTS, logg_lims)
-        self.nlogg = len(self.loggs)
-        self.zl    = z_lims
-        self.zs    = is_inside(Z_POINTS, z_lims)
-        self.nz    = len(self.zs)
-        self.pars  = [p for p in product(self.teffs,self.loggs,self.zs)]
-        self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
-        self.clean_file_list()
-
-        self.not_cached =  len(self.files) - sum([f.local_exists for f in self.files])
-        if self.not_cached > 0:
-            message("Need to download {:d} files, approximately {} MB".format(self.not_cached, 16*self.not_cached))
-    
-
-    def get_server_file_list(self):
-        ftp = FTP(self.eftp)
-        ftp.login()
-        ftp.cwd(self.edir)
-        files_in_server = {}
-        zdirs = sorted(ftp.nlst())
-        for zdir in zdirs:
-            ftp.cwd(zdir)
-            files_in_server[zdir] = sorted(ftp.nlst())
-            ftp.cwd('..')
-        ftp.close()
-        return files_in_server
-
-
-    def files_exist(self, files=None):
-        """Tests if a file exists in the FTP server."""
-        return [f.name in self.files_in_server[f._zstr] for f in self.files]
-            
-    
-    def clean_file_list(self):
-        """Removes files not in the FTP server."""
-        self.files = [f for f,e in zip(self.files,self.files_exist()) if e]
-
-
-    def download_uncached_files(self, force=False):
-        """Downloads the uncached files to a local cache."""
-        ftp = FTP(self.eftp)
-        ftp.login()
-        ftp.cwd(self.edir)
-
-        if self.not_cached > 0 or force:
-            pbar = ProgressBar(self.not_cached if not force else len(self.files))
-        
-        for fid,f in enumerate(self.files):
-            if not exists(join(ldtk_cache,f._zstr)):
-                os.mkdir(join(ldtk_cache,f._zstr))
-            if not f.local_exists or force:
-                ftp.cwd(f._zstr)
-                localfile = open(f.local_path, 'wb')
-                ftp.retrbinary('RETR '+f.name, localfile.write)
-                localfile.close()
-                ftp.cwd('..')
-                self.not_cached -= 1
-                pbar.increase()
-            else:
-                if self.verbosity > 1:
-                    print 'Skipping an existing file: ', f.name
-        ftp.close()
- 
-
-    @property
-    def local_filenames(self):
-        return [f.local_path for f in self.files]
-        
-        
+## ============        
 class LDPSet(object):
     def __init__(self, filters, mu, ldp, ldp_s):
         self._filters  = filters 
