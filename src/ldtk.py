@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 import os
 from os.path import join, exists
+import warnings
 import pyfits as pf
 
 from glob import glob
@@ -26,6 +27,7 @@ from ftplib import FTP
 from itertools import product
 from functools import partial
 from os.path import exists, join, basename
+from cPickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
 from numpy.random import normal, uniform, multivariate_normal
@@ -37,14 +39,33 @@ from itertools import product
 
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 
+## Test if we're running inside IPython
+## ------------------------------------
+try:
+    __IPYTHON__
+    from IPython.display import display, HTML
+    with_ipython = True
+except NameError:
+    with_ipython = False
+
+warnings.filterwarnings('ignore')
+with warnings.catch_warnings():
+    try:
+        from IPython.display import display, clear_output
+        from IPython.html.widgets import IntProgress
+        w = IntProgress()
+        with_notebook = True
+    except AttributeError:
+        with_notebook = False
+
 ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
 ldtk_cache = join(ldtk_root,'cache')
+ldtk_server_file_list = join(ldtk_root, 'server_file_list.pkl')
 
 if not exists(ldtk_root):
     os.mkdir(ldtk_root)
 if not exists(ldtk_cache):
     os.mkdir(ldtk_cache)
-
     
 ## Constants
 ## =========
@@ -52,11 +73,27 @@ if not exists(ldtk_cache):
 TWO_PI      = 2*pi
 TEFF_POINTS = delete(arange(2300,12001,100), [27])
 LOGG_POINTS = arange(0,6.1,0.5)
-Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, 0, 0.5, 1.0])
-
+Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, -0.0, 0.5, 1.0])
 
 ## Utility functions
 ## =================
+
+def message(text):
+    if with_ipython:
+        display(HTML(text))
+    else:
+        print text
+
+class ProgressBar(object):
+    def __init__(self, max_v):
+        if with_notebook:
+            self.pb = IntProgress(value=0, max=max_v)
+            display(self.pb)
+
+    def value(self, v):
+        if with_notebook:
+            self.pb.value = v
+
 
 def dxdx(f, x, h):
     return (f(x+h) - 2*f(x) + f(x-h)) / h**2
@@ -98,8 +135,6 @@ class SpecIntFile(object):
         self.logg = logg
         self.z    = z
         self.name  = tmpl.format(teff=self.teff, logg=self.logg, z=self.z)
-        if z < 1e-4:
-            self.name = self.name.replace('+0.0','-0.0')
         self._zstr = 'Z'+self.name[13:17]
         
     @property
@@ -112,29 +147,40 @@ class SpecIntFile(object):
     
     
 class Client(object):
-    def __init__(self, limits=None, verbosity=1):
+    def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
         self.fnt = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
         self.files = None
         self.verbosity = verbosity
-        
+
+        if exists(ldtk_server_file_list) and not update_server_file_list:
+            with open(ldtk_server_file_list, 'r') as fin:
+                self.files_in_server = load(fin)
+        else:
+            self.files_in_server = self.get_server_file_list()
+            with open(ldtk_server_file_list, 'w') as fout:
+                dump(self.files_in_server, fout)
+
         if limits:
             self.set_limits(*limits)
 
+
     def _local_path(self, teff_or_fn, logg=None, z=None):
+        """Creates the path to the local version of the file."""
         fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
         return join(ldtk_cache,'Z'+fn[13:17],fn)
         
+
     def _local_exists(self, teff_or_fn, logg=None, z=None):
-        print self._local_path(teff_or_fn, logg, z)
+        """Tests if a file exists in the local cache. """
         return exists(self._local_path(teff_or_fn, logg, z))
         
+
     def create_name(self, teff, logg, z):
-        name = self.fnt.format(teff=int(teff), logg=logg, z=z)
-        if z < 1e-4:
-            name = name.replace('+0.0','-0.0')
-        return name
+        """Creates a SPECINT filename given teff, logg, and z."""
+        return self.fnt.format(teff=int(teff), logg=logg, z=z)
+
 
     def set_limits(self, teff_lims, logg_lims, z_lims):
         self.teffl = teff_lims
@@ -148,22 +194,40 @@ class Client(object):
         self.nz    = len(self.zs)
         self.pars  = [p for p in product(self.teffs,self.loggs,self.zs)]
         self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
+        self.clean_file_list()
 
         self.not_cached =  len(self.files) - sum([exists(f) for f in self.local_filenames])
         if self.not_cached > 0:
-            print "Need to download {:d} files, approximately {} MB".format(self.not_cached, 16*self.not_cached)
+            message("Need to download {:d} files, approximately {} MB".format(self.not_cached, 16*self.not_cached))
     
-    def files_exist(self, files=None):
+
+    def get_server_file_list(self):
         ftp = FTP(self.eftp)
         ftp.login()
         ftp.cwd(self.edir)
-        ftp.cwd('Z-0.0')
-        efiles = []
-        ftp.retrlines('list',lambda s: efiles.append(s.split()[-1].replace('+','-')))
+        files_in_server = {}
+        zdirs = sorted(ftp.nlst())
+        for zdir in zdirs:
+            ftp.cwd(zdir)
+            files_in_server[zdir] = sorted(ftp.nlst())
+            ftp.cwd('..')
         ftp.close()
-        return [f in efiles for f in (files or self.files)]
+        return files_in_server
+
+
+    def files_exist(self, files=None):
+        """Tests if a file exists in the FTP server."""
+        return [f.name in self.files_in_server[f._zstr] for f in self.files]
+            
     
+    def clean_file_list(self):
+        """Removes files not in the FTP server."""
+        self.files = [f for f,e in zip(self.files,self.files_exist()) if e]
+
+
     def download_uncached_files(self, force=False):
+        """Downloads the uncached files to a local cache."""
+        pbar = ProgressBar(len(self.files))
         ftp = FTP(self.eftp)
         ftp.login()
         ftp.cwd(self.edir)
@@ -180,8 +244,10 @@ class Client(object):
             else:
                 if self.verbosity > 1:
                     print 'Skipping an existing file: ', f.name
+            pbar.value(fid+1)
         ftp.close()
  
+
     @property
     def local_filenames(self):
         return [f.local_path for f in self.files]
@@ -365,7 +431,6 @@ class LDPSetCreator(object):
         else:
             teff_lims, logg_lims, metal_lims = lims
 
-
         self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims])
         self.files    = self.client.local_filenames
         self.filters  = filters
@@ -375,6 +440,8 @@ class LDPSetCreator(object):
 
         self.client.download_uncached_files(force=force_download)
 
+        ## Initialize the basic arrays
+        ## ---------------------------
         with pf.open(self.files[0]) as hdul:
             wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
             dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
@@ -384,6 +451,8 @@ class LDPSetCreator(object):
             self.z    = sqrt(1-self.mu**2)
             self.nmu  = self.mu.size
         
+        ## Read in the fluxes
+        ## ------------------
         self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu])
         for fid,f in enumerate(self.filters):
             w = f(wl) * self.qe(wl)
@@ -391,9 +460,9 @@ class LDPSetCreator(object):
                 self.fluxes[fid,did,:]  = (pf.getdata(df)*w).mean(1)
                 self.fluxes[fid,did,:] /= self.fluxes[fid,did,-1]
 
-        ## Create n_filter interpolator objects
-        ##
-        points = array([p for p in product(c.teffs, c.loggs, c.zs)])
+        ## Create n_filter interpolators
+        ## -----------------------------
+        points = array([[f.teff,f.logg,f.z] for f in self.client.files])
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
          
         
