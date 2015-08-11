@@ -90,9 +90,9 @@ class ProgressBar(object):
             self.pb = IntProgress(value=0, max=max_v)
             display(self.pb)
 
-    def value(self, v):
+    def increase(self, v=1):
         if with_notebook:
-            self.pb.value = v
+            self.pb.value += v
 
 
 def dxdx(f, x, h):
@@ -196,7 +196,7 @@ class Client(object):
         self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
         self.clean_file_list()
 
-        self.not_cached =  len(self.files) - sum([exists(f) for f in self.local_filenames])
+        self.not_cached =  len(self.files) - sum([f.local_exists for f in self.files])
         if self.not_cached > 0:
             message("Need to download {:d} files, approximately {} MB".format(self.not_cached, 16*self.not_cached))
     
@@ -227,10 +227,13 @@ class Client(object):
 
     def download_uncached_files(self, force=False):
         """Downloads the uncached files to a local cache."""
-        pbar = ProgressBar(len(self.files))
         ftp = FTP(self.eftp)
         ftp.login()
         ftp.cwd(self.edir)
+
+        if self.not_cached > 0 or force:
+            pbar = ProgressBar(self.not_cached if not force else len(self.files))
+        
         for fid,f in enumerate(self.files):
             if not exists(join(ldtk_cache,f._zstr)):
                 os.mkdir(join(ldtk_cache,f._zstr))
@@ -241,10 +244,10 @@ class Client(object):
                 localfile.close()
                 ftp.cwd('..')
                 self.not_cached -= 1
+                pbar.increase()
             else:
                 if self.verbosity > 1:
                     print 'Skipping an existing file: ', f.name
-            pbar.value(fid+1)
         ftp.close()
  
 
