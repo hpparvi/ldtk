@@ -79,10 +79,6 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
  - LDPSetCreator : Generates a set of limb darkening profiles given a set of filters and stellar TEff, logg, and z.
  - LDPSet : Encapsulates the limb darkening profiles and offers methods for model coefficient estimation and log likelihood evaluation.
 
-## Known issues
-
-- The Husser et al. library is missing some files that should be there, which sometimes breaks the creation of a structured interpolation grid. This will be fixed in the final release.
-
 ## Authors
 
 Hannu Parviainen, University of Oxford
