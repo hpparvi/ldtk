@@ -42,6 +42,15 @@ spectroscopy where the modeling is carried out for custom narrow passbands. The 
 
 The second approach can be used to constrain the LD model parameter space directly by the LD profile, allowing for the marginalization over the whole parameter space that can explain the profile without the need to approximate this constraint by a prior distribution. This is useful when using a high-order limb darkening model where the coefficients are often correlated, and the priors estimated from the tabulated values usually fail to include these correlations.
 
+## Requirements
+### Core requirements
+- Python 2.7
+- NumPy => 1.7
+- SciPy => 0.14
+
+### Notebooks
+- IPython => 3.0
+
 ## Installation
 
 Simple: clone the source from github and follow the basic Python package installation routine
