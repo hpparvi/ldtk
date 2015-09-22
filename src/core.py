@@ -44,7 +44,7 @@ with warnings.catch_warnings():
         from IPython.html.widgets import IntProgress
         w = IntProgress()
         with_notebook = True
-    except AttributeError:
+    except (NameError,AttributeError):
         with_notebook = False
 
 ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
