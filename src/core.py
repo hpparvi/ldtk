@@ -114,6 +114,9 @@ def is_inside(a,lims):
 def a_lims(a,v,e,s=3):
     return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
 
+def a_lims_hilo(a,lo,hi):
+    return a[[max(0,a.searchsorted(lo)-1),min(a.size-1, a.searchsorted(hi))]]
+
 ## Utility classes
 ## ===============
 class SpecIntFile(object):
