@@ -236,17 +236,36 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False):
+    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False, verbose=False): 
+        """Note that (teff, logg, z) can all either be of the form (value, uncertainty)
+           or alternatively they can be 1D arrays of posterior values."""
         self.teff  = teff
         self.logg  = logg
         self.metal = z
 
+        threesig = (1. - 0.9973)/2. # 0.00135
+        # Check whether (value, uncert.) or array of posterior values
+        #    were input:
         if not limits:
-            teff_lims  = a_lims(TEFF_POINTS, *teff)
-            logg_lims  = a_lims(LOGG_POINTS, *logg)
-            metal_lims = a_lims(Z_POINTS, *z)
+            if len(teff)>2:
+                teff_lims = dumbconf(teff, threesig, 'upper'), dumbconf(teff, threesig, 'lower')
+            else:
+                teff_lims  = a_lims(TEFF_POINTS, *teff)
+            if len(logg)>2:
+                logg_lims  = dumbconf(logg, threesig, 'upper'), dumbconf(logg, threesig, 'lower')
+            else:
+                logg_lims  = a_lims(LOGG_POINTS, *logg)
+            if len(z)>2:
+                metal_lims = dumbconf(z, threesig, 'upper'), dumbconf(z, threesig, 'lower')
+            else:
+                metal_lims = a_lims(Z_POINTS, *z)
         else:
-            teff_lims, logg_lims, metal_lims = lims
+            teff_lims, logg_lims, metal_lims = limits
+
+        if verbose:
+            print "Teff limits: ", teff_lims
+            print "logg limits: ", logg_lims
+            print "Fe/H limits: ", metal_lims
 
         self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims])
         self.files    = self.client.local_filenames
@@ -283,13 +302,36 @@ class LDPSetCreator(object):
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
          
         
-    def create_profiles(self, nsamples=20, mode=0, nmu=100):
-        self.ldp_samples = zeros([self.nfilters, nsamples, self.nmu])
-        samples = ones([nsamples,3])
-        samples[:,0] = clip(normal(*self.teff,  size=nsamples), *self.client.teffl)
-        samples[:,1] = clip(normal(*self.logg,  size=nsamples), *self.client.loggl)
-        samples[:,2] = clip(normal(*self.metal, size=nsamples), *self.client.zl)
-                
+    def create_profiles(self, nsamples=20, mode=0, nmu=100, teff_in=None, logg_in=None, metal_in=None):
+        """Note that (teff, logg, z) are by default read in from the previously-created
+           object. However, alternative posterior distributions can be passed in via
+           (teff_in, logg_in, metal_in). """
+        # Check whether params were input as (value, uncert.), or as
+        # posteriors, or whether new posteriors are being input here:
+        if teff_in is None:   
+            if len(self.teff)==2: 
+                teff_in = normal(*self.teff,  size=nsamples)
+            else:
+                teff_in = self.teff
+        if logg_in is None:   
+            if len(self.logg)==2:
+                logg_in = normal(*self.logg,  size=nsamples)
+            else:
+                logg_in = self.logg
+        if metal_in is None: 
+            if len(self.metal)==2:
+                metal_in = normal(*self.metal, size=nsamples)
+            else:
+                metal_in = self.metal
+
+        # In case Teff/logg/metal arrays have different sizes:
+        minsize = min(map(len, [teff_in, logg_in, metal_in]))
+        samples = ones([minsize,3])
+        self.ldp_samples = zeros([self.nfilters, minsize, self.nmu])
+
+        samples[:,0] = clip(teff_in, *self.client.teffl)[0:minsize]
+        samples[:,1] = clip(logg_in, *self.client.loggl)[0:minsize]
+        samples[:,2] = clip(metal_in, *self.client.zl)[0:minsize]
         for iflt in range(self.nfilters):
             self.ldp_samples[iflt,:,:] = self.itps[iflt](samples)
 
@@ -298,3 +340,92 @@ class LDPSetCreator(object):
     @property
     def filter_names(self):
         return [f.name for f in self.filters]
+
+
+def dumbconf(vec, sig, type='central', mid='mean', verbose=False):
+    """
+    Determine two-sided and one-sided confidence limits, using sorting.
+
+    :INPUTS:
+      vec : sequence
+        1D Vector of data values, for which confidence levels will be
+        computed.
+
+      sig : scalar
+        Confidence level, 0 < sig < 1. If type='central', we return
+        the value X for which the range (mid-X, mid+x) encloses a
+        fraction sig of the data values.
+
+    :OPTIONAL INPUTS:
+       type='central' -- 'upper', 'lower', or 'central' confidence limits
+       mid='mean'  -- compute middle with mean or median
+
+    :SEE_ALSO:
+      :func:`confmap` for 2D distributions
+
+    :EXAMPLES:
+       ::
+
+           from numpy import random
+           from analysis import dumbconf
+           x = random.randn(10000)
+           dumbconf(x, 0.683)    #  --->   1.0  (one-sigma)
+           dumbconf(3*x, 0.954)  #  --->   6.0  (two-sigma)
+           dumbconf(x+2, 0.997, type='lower')   #  --->   -0.74
+           dumbconf(x+2, 0.997, type='upper')   #  --->    4.7
+
+    
+    Some typical values for a Normal (Gaussian) distribution:
+
+
+      ========= ================
+       type     confidence level
+      ========= ================
+      one-sigma	   0.6826895
+      2 sigma	   0.9544997
+      3 sigma	   0.9973002
+      4 sigma	   0.9999366
+      5 sigma	   0.9999994
+      ========= ================
+    """
+    # 2009-03-25 22:47 IJC: A Better way to do it (using bisector technique)
+    # 2009-03-26 15:37 IJC: Forget bisecting -- just sort.
+    # 2013-04-25 12:05 IJMC: Return zero if vector input is empty.
+    # 2013-05-15 07:30 IJMC: Updated documentation.
+    # 2015-11-16 11:37 IJMC: Moved into LDTk module.
+    from numpy import sort, array
+
+    vec = array(vec).copy()
+    sig = array([sig]).ravel()
+    if vec.size==0: return array([0])
+
+    #vec = sort(vec)
+    N = len(vec)
+    Ngoal = sig*N
+
+    if mid=='mean':
+        mid = vec.mean()
+    elif mid=='median':
+        mid = median(vec)
+    else:
+        try:
+            mid = mid + 0.0
+        except MidMethodException:
+            print "mid must be median, mean, or numeric in value!"
+            return -1
+    
+    if type =='central':
+        vec2 = sort(abs(vec-mid))
+    elif type=='upper':
+        vec2 = sort(vec)
+    elif type=='lower':
+        vec2 = -sort(-vec)
+    else:
+        print "Invalid type -- must be central, upper, or lower"
+        return -1
+    
+    ret = []
+    for ii in range(len(sig)):
+        ret.append(vec2[int(Ngoal[ii])])
+    return ret
+x
