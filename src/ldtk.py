@@ -32,6 +32,7 @@ def load_ldpset(filename):
     with open(filename,'r') as fin:
         return LDPSet(load(fin), load(fin), load(fin))
 
+##TODO: Give an option to use Kernel density estimation if given a set of teff,logg,z samples.
 
 ## Main classes
 ## ============        
@@ -243,22 +244,16 @@ class LDPSetCreator(object):
         self.logg  = logg
         self.metal = z
 
-        threesig = (1. - 0.9973)/2. # 0.00135
-        # Check whether (value, uncert.) or array of posterior values
-        #    were input:
+        def set_lims(ms_or_samples, pts, plims=[0.00135,1-0.00135] ):
+            if len(ms_or_samples) > 2:
+                return a_lims_hilo(pts, *percentile(ms_or_samples, plims))
+            else:
+                return a_lims(pts, *ms_or_samples)
+        
         if not limits:
-            if len(teff)>2:
-                teff_lims = a_lims_hilo(TEFF_POINTS, dumbconf(teff, threesig, 'upper')[0], dumbconf(teff, threesig, 'lower')[0])
-            else:
-                teff_lims  = a_lims(TEFF_POINTS, *teff)
-            if len(logg)>2:
-                logg_lims  = a_lims_hilo(LOGG_POINTS, dumbconf(logg, threesig, 'upper')[0], dumbconf(logg, threesig, 'lower')[0])
-            else:
-                logg_lims  = a_lims(LOGG_POINTS, *logg)
-            if len(z)>2:
-                metal_lims = a_lims_hilo(Z_POINTS, dumbconf(z, threesig, 'upper')[0], dumbconf(z, threesig, 'lower')[0])
-            else:
-                metal_lims = a_lims(Z_POINTS, *z)
+            teff_lims  = set_lims(teff, TEFF_POINTS)
+            logg_lims  = set_lims(logg, LOGG_POINTS)
+            metal_lims = set_lims(z,    Z_POINTS)
         else:
             teff_lims, logg_lims, metal_lims = limits
 
@@ -302,36 +297,39 @@ class LDPSetCreator(object):
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
          
         
-    def create_profiles(self, nsamples=20, mode=0, nmu=100, teff_in=None, logg_in=None, metal_in=None):
-        """Note that (teff, logg, z) are by default read in from the previously-created
+    def create_profiles(self, nsamples=20, mode=0, nmu=100, teff=None, logg=None, metal=None):
+        """Creates a set of limb darkening profiles
+
+           Parameters
+           ----------
+           nsamples : int number of limb darkening profiles
+           mode
+           nmu
+           teff  : array_like [optional]
+           logg  : array_like [optional]
+           metal : array_like [optional]
+            
+           Notes
+           -----
+           Teff, logg, and z are by default read in from the previously-created
            object. However, alternative posterior distributions can be passed in via
-           (teff_in, logg_in, metal_in). """
-        # Check whether params were input as (value, uncert.), or as
-        # posteriors, or whether new posteriors are being input here:
-        if teff_in is None:   
-            if len(self.teff)==2: 
-                teff_in = normal(*self.teff,  size=nsamples)
-            else:
-                teff_in = self.teff
-        if logg_in is None:   
-            if len(self.logg)==2:
-                logg_in = normal(*self.logg,  size=nsamples)
-            else:
-                logg_in = self.logg
-        if metal_in is None: 
-            if len(self.metal)==2:
-                metal_in = normal(*self.metal, size=nsamples)
-            else:
-                metal_in = self.metal
+           (teff_in, logg_in, metal_in).
+        """
 
-        # In case Teff/logg/metal arrays have different sizes:
-        minsize = min(map(len, [teff_in, logg_in, metal_in]))
+        def sample(a,b):
+            return a if a is not None else (b if len(b!=2) else normal(*b, size=nsamples))
+
+        teff  = sample(teff,  self.teff)
+        logg  = sample(logg,  self.logg)
+        metal = sample(metal, self.metal)
+    
+        minsize = min(map(len, [teff, logg, metal]))
         samples = ones([minsize,3])
+        samples[:,0] = clip(teff,  *self.client.teffl)[:minsize]
+        samples[:,1] = clip(logg,  *self.client.loggl)[:minsize]
+        samples[:,2] = clip(metal, *self.client.zl)[:minsize]
+        
         self.ldp_samples = zeros([self.nfilters, minsize, self.nmu])
-
-        samples[:,0] = clip(teff_in, *self.client.teffl)[0:minsize]
-        samples[:,1] = clip(logg_in, *self.client.loggl)[0:minsize]
-        samples[:,2] = clip(metal_in, *self.client.zl)[0:minsize]
         for iflt in range(self.nfilters):
             self.ldp_samples[iflt,:,:] = self.itps[iflt](samples)
 
@@ -341,91 +339,3 @@ class LDPSetCreator(object):
     def filter_names(self):
         return [f.name for f in self.filters]
 
-
-def dumbconf(vec, sig, type='central', mid='mean', verbose=False):
-    """
-    Determine two-sided and one-sided confidence limits, using sorting.
-
-    :INPUTS:
-      vec : sequence
-        1D Vector of data values, for which confidence levels will be
-        computed.
-
-      sig : scalar
-        Confidence level, 0 < sig < 1. If type='central', we return
-        the value X for which the range (mid-X, mid+x) encloses a
-        fraction sig of the data values.
-
-    :OPTIONAL INPUTS:
-       type='central' -- 'upper', 'lower', or 'central' confidence limits
-       mid='mean'  -- compute middle with mean or median
-
-    :SEE_ALSO:
-      :func:`confmap` for 2D distributions
-
-    :EXAMPLES:
-       ::
-
-           from numpy import random
-           from analysis import dumbconf
-           x = random.randn(10000)
-           dumbconf(x, 0.683)    #  --->   1.0  (one-sigma)
-           dumbconf(3*x, 0.954)  #  --->   6.0  (two-sigma)
-           dumbconf(x+2, 0.997, type='lower')   #  --->   -0.74
-           dumbconf(x+2, 0.997, type='upper')   #  --->    4.7
-
-    
-    Some typical values for a Normal (Gaussian) distribution:
-
-
-      ========= ================
-       type     confidence level
-      ========= ================
-      one-sigma	   0.6826895
-      2 sigma	   0.9544997
-      3 sigma	   0.9973002
-      4 sigma	   0.9999366
-      5 sigma	   0.9999994
-      ========= ================
-    """
-    # 2009-03-25 22:47 IJC: A Better way to do it (using bisector technique)
-    # 2009-03-26 15:37 IJC: Forget bisecting -- just sort.
-    # 2013-04-25 12:05 IJMC: Return zero if vector input is empty.
-    # 2013-05-15 07:30 IJMC: Updated documentation.
-    # 2015-11-16 11:37 IJMC: Moved into LDTk module.
-    from numpy import sort, array
-
-    vec = array(vec).copy()
-    sig = array([sig]).ravel()
-    if vec.size==0: return array([0])
-
-    #vec = sort(vec)
-    N = len(vec)
-    Ngoal = sig*N
-
-    if mid=='mean':
-        mid = vec.mean()
-    elif mid=='median':
-        mid = median(vec)
-    else:
-        try:
-            mid = mid + 0.0
-        except MidMethodException:
-            print "mid must be median, mean, or numeric in value!"
-            return -1
-    
-    if type =='central':
-        vec2 = sort(abs(vec-mid))
-    elif type=='upper':
-        vec2 = sort(vec)
-    elif type=='lower':
-        vec2 = -sort(-vec)
-    else:
-        print "Invalid type -- must be central, upper, or lower"
-        return -1
-    
-    ret = []
-    for ii in range(len(sig)):
-        ret.append(vec2[int(Ngoal[ii])])
-    return ret
-x
