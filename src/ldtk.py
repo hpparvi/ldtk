@@ -248,15 +248,15 @@ class LDPSetCreator(object):
         #    were input:
         if not limits:
             if len(teff)>2:
-                teff_lims = dumbconf(teff, threesig, 'upper'), dumbconf(teff, threesig, 'lower')
+                teff_lims = a_lims_hilo(TEFF_POINTS, dumbconf(teff, threesig, 'upper')[0], dumbconf(teff, threesig, 'lower')[0])
             else:
                 teff_lims  = a_lims(TEFF_POINTS, *teff)
             if len(logg)>2:
-                logg_lims  = dumbconf(logg, threesig, 'upper'), dumbconf(logg, threesig, 'lower')
+                logg_lims  = a_lims_hilo(LOGG_POINTS, dumbconf(logg, threesig, 'upper')[0], dumbconf(logg, threesig, 'lower')[0])
             else:
                 logg_lims  = a_lims(LOGG_POINTS, *logg)
             if len(z)>2:
-                metal_lims = dumbconf(z, threesig, 'upper'), dumbconf(z, threesig, 'lower')
+                metal_lims = a_lims_hilo(Z_POINTS, dumbconf(z, threesig, 'upper')[0], dumbconf(z, threesig, 'lower')[0])
             else:
                 metal_lims = a_lims(Z_POINTS, *z)
         else:
