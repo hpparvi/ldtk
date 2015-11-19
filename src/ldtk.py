@@ -244,7 +244,7 @@ class LDPSetCreator(object):
         self.logg  = logg
         self.metal = z
 
-        def set_lims(ms_or_samples, pts, plims=[0.00135,1-0.00135] ):
+        def set_lims(ms_or_samples, pts, plims=[0.135,100-0.135] ):
             if len(ms_or_samples) > 2:
                 return a_lims_hilo(pts, *percentile(ms_or_samples, plims))
             else:
@@ -297,14 +297,12 @@ class LDPSetCreator(object):
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
          
         
-    def create_profiles(self, nsamples=20, mode=0, nmu=100, teff=None, logg=None, metal=None):
+    def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None):
         """Creates a set of limb darkening profiles
 
            Parameters
            ----------
            nsamples : int number of limb darkening profiles
-           mode
-           nmu
            teff  : array_like [optional]
            logg  : array_like [optional]
            metal : array_like [optional]
@@ -317,13 +315,13 @@ class LDPSetCreator(object):
         """
 
         def sample(a,b):
-            return a if a is not None else (b if len(b!=2) else normal(*b, size=nsamples))
+            return a if a is not None else (b if len(b)!=2 else normal(*b, size=nsamples))
 
         teff  = sample(teff,  self.teff)
         logg  = sample(logg,  self.logg)
         metal = sample(metal, self.metal)
     
-        minsize = min(map(len, [teff, logg, metal]))
+        minsize = min(nsamples, min(map(len, [teff, logg, metal])))
         samples = ones([minsize,3])
         samples[:,0] = clip(teff,  *self.client.teffl)[:minsize]
         samples[:,1] = clip(logg,  *self.client.loggl)[:minsize]

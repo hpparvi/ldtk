@@ -25,7 +25,7 @@ from glob import glob
 from os.path import exists, join, basename
 from cPickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
-                   diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi)
+                   diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
 
 ## Test if we're running inside IPython
