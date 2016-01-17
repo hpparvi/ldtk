@@ -1,4 +1,9 @@
 # PyLDTk
+
+[![Licence](http://img.shields.io/badge/license-GPLv2-blue.svg?style=flat)](http://www.gnu.org/licenses/gpl-2.0.html)
+[![arXiv](http://img.shields.io/badge/arXiv-1508.02634-blue.svg?style=flat)](http://arxiv.org/abs/1508.02634)
+[![ASCL](https://img.shields.io/badge/ASCL-1510.003-blue.svg?style=flat)](http://ascl.net/1510.003)
+
 Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary filters using the stellar spectrum model library by Husser et al (2013).
 
 ```python
