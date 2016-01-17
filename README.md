@@ -88,6 +88,28 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
  - LDPSetCreator : Generates a set of limb darkening profiles given a set of filters and stellar TEff, logg, and z.
  - LDPSet : Encapsulates the limb darkening profiles and offers methods for model coefficient estimation and log likelihood evaluation.
 
+## Citing
+
+If you use PyLDTk in your research, please cite 
+
+Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
+
+or use this ready made BibTeX entry
+
+    @article{Parviainen2015,
+      author = {Parviainen, Hannu and Aigrain, Suzanne},
+      doi = {10.1093/mnras/stv1857},
+      journal = {MNRAS},
+      month = nov,
+      number = {4},
+      pages = {3821--3826},
+      title = {{ldtk: Limb Darkening Toolkit}},
+      url = {http://mnras.oxfordjournals.org/lookup/doi/10.1093/mnras/stv1857},
+      volume = {453},
+      year = {2015}
+    }
+
+
 ## Author
 
 Hannu Parviainen, University of Oxford
