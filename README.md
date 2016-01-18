@@ -96,11 +96,15 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
 
 ## Citing
 
-If you use PyLDTk in your research, please cite 
+If you use PyLDTk in your research, please cite the PyLDTk paper
 
-Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
+    Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
+    
+and the paper describing the spectrum library without which PyLDTk would be rather useless 
 
-or use this ready made BibTeX entry
+    Husser, T.-O. et al. A&A 553, A6 (2013) (DOI:10.1051/0004-6361/201219058).
+
+or use these ready made BibTeX entries
 
     @article{Parviainen2015,
       author = {Parviainen, Hannu and Aigrain, Suzanne},
@@ -115,6 +119,16 @@ or use this ready made BibTeX entry
       year = {2015}
     }
 
+    @article{Husser2013,
+      author = {Husser, T.-O. and {Wende-von Berg}, S and Dreizler, S and Homeier, D and
+                 Reiners, A and Barman, T. and Hauschildt, Peter H},
+      doi = {10.1051/0004-6361/201219058},
+      journal = {A{\&}A},
+      pages = {A6},
+      title = {{Astrophysics A new extensive library of PHOENIX stellar atmospheres}},
+      volume = {553},
+      year = {2013}
+    }
 
 ## Author
 
