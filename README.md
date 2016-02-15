@@ -20,7 +20,7 @@ sc = LDPSetCreator(teff=(6400,   50),    # Define your star, and the code
                    filters=filters)      # FTP server automatically.
 
 ps = sc.create_profiles()                # Create the limb darkening profiles
-cq,eq = ps.coeffs_qd(use_mc=True)        # Estimate quadratic law coefficients
+cq,eq = ps.coeffs_qd(do_mc=True)        # Estimate quadratic law coefficients
 
 lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log 
                        [0.35,0.10],      # likelihood for a set of coefficients 
