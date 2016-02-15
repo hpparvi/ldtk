@@ -27,6 +27,7 @@ from cPickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
+from traitlets import TraitError
 
 ## Test if we're running inside IPython
 ## ------------------------------------
@@ -44,7 +45,7 @@ with warnings.catch_warnings():
         from IPython.html.widgets import IntProgress
         w = IntProgress()
         with_notebook = True
-    except (NameError,AttributeError,ImportError):
+    except (NameError,AttributeError,ImportError,TraitError):
         with_notebook = False
 
 ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
