@@ -1,9 +1,11 @@
 # PyLDTk
 
 [![Licence](http://img.shields.io/badge/license-GPLv2-blue.svg?style=flat)](http://www.gnu.org/licenses/gpl-2.0.html)
+[![MNRAS](https://img.shields.io/badge/MNRAS-10.1093%2Fmnras%2Fstv1857-blue.svg)](http://mnras.oxfordjournals.org/content/453/4/3821.abstract)
 [![arXiv](http://img.shields.io/badge/arXiv-1508.02634-blue.svg?style=flat)](http://arxiv.org/abs/1508.02634)
 [![ASCL](https://img.shields.io/badge/ASCL-1510.003-blue.svg?style=flat)](http://ascl.net/1510.003)
 [![DOI](https://zenodo.org/badge/5871/hpparvi/ldtk.svg)](https://zenodo.org/badge/latestdoi/5871/hpparvi/ldtk)
+
 
 **Py**thon **L**imb **D**arkening **T**ool**k**it - a Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary passbands using the stellar spectrum model library by Husser et al (2013).
 
