@@ -13,7 +13,7 @@ setup(name='LDTk',
       url='https://github.com/hpparvi/ldtk',
       package_dir={'ldtk':'src'},
       packages=['ldtk'],
-      install_requires=["numpy"],
+      install_requires=["numpy","scipy","astropy"],
       license='GPLv2',
       classifiers=[
           "Topic :: Scientific/Engineering",
