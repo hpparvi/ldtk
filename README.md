@@ -136,7 +136,9 @@ Hannu Parviainen, University of Oxford
 
 ## Contributors
 
-Ian Crossfield, University of Arizona
+[Tom Louden](https://github.com/tomlouden), University of Warwick
+
+[Ian Crossfield](https://github.com/iancrossfield), University of Arizona
 
 --
 
