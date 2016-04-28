@@ -1,5 +1,13 @@
 # PyLDTk
-Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary filters using the stellar spectrum model library by Husser et al (2013).
+
+[![Licence](http://img.shields.io/badge/license-GPLv2-blue.svg?style=flat)](http://www.gnu.org/licenses/gpl-2.0.html)
+[![MNRAS](https://img.shields.io/badge/MNRAS-10.1093%2Fmnras%2Fstv1857-blue.svg)](http://mnras.oxfordjournals.org/content/453/4/3821.abstract)
+[![arXiv](http://img.shields.io/badge/arXiv-1508.02634-blue.svg?style=flat)](http://arxiv.org/abs/1508.02634)
+[![ASCL](https://img.shields.io/badge/ASCL-1510.003-blue.svg?style=flat)](http://ascl.net/1510.003)
+[![DOI](https://zenodo.org/badge/5871/hpparvi/ldtk.svg)](https://zenodo.org/badge/latestdoi/5871/hpparvi/ldtk)
+
+
+**Py**thon **L**imb **D**arkening **T**ool**k**it - a Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary passbands using the stellar spectrum model library by Husser et al (2013).
 
 ```python
 from ldtk import LDPSetCreator, BoxcarFilter
@@ -14,7 +22,7 @@ sc = LDPSetCreator(teff=(6400,   50),    # Define your star, and the code
                    filters=filters)      # FTP server automatically.
 
 ps = sc.create_profiles()                # Create the limb darkening profiles
-cq,eq = ps.coeffs_qd(use_mc=True)        # Estimate quadratic law coefficients
+cq,eq = ps.coeffs_qd(do_mc=True)        # Estimate quadratic law coefficients
 
 lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log 
                        [0.35,0.10],      # likelihood for a set of coefficients 
@@ -88,10 +96,52 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
  - LDPSetCreator : Generates a set of limb darkening profiles given a set of filters and stellar TEff, logg, and z.
  - LDPSet : Encapsulates the limb darkening profiles and offers methods for model coefficient estimation and log likelihood evaluation.
 
-## Authors
+## Citing
+
+If you use PyLDTk in your research, please cite the PyLDTk paper
+
+    Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
+    
+and the paper describing the spectrum library without which PyLDTk would be rather useless 
+
+    Husser, T.-O. et al. A&A 553, A6 (2013) (DOI:10.1051/0004-6361/201219058).
+
+or use these ready made BibTeX entries
+
+    @article{Parviainen2015,
+      author = {Parviainen, Hannu and Aigrain, Suzanne},
+      doi = {10.1093/mnras/stv1857},
+      journal = {MNRAS},
+      month = nov,
+      number = {4},
+      pages = {3821--3826},
+      title = {{ldtk: Limb Darkening Toolkit}},
+      url = {http://mnras.oxfordjournals.org/lookup/doi/10.1093/mnras/stv1857},
+      volume = {453},
+      year = {2015}
+    }
+
+    @article{Husser2013,
+      author = {Husser, T.-O. and {Wende-von Berg}, S and Dreizler, S and Homeier, D and
+                 Reiners, A and Barman, T. and Hauschildt, Peter H},
+      doi = {10.1051/0004-6361/201219058},
+      journal = {A{\&}A},
+      pages = {A6},
+      title = {{Astrophysics A new extensive library of PHOENIX stellar atmospheres}},
+      volume = {553},
+      year = {2013}
+    }
+
+## Author
 
 Hannu Parviainen, University of Oxford
 
+## Contributors
+
+[Tom Louden](https://github.com/tomlouden), University of Warwick
+
+[Ian Crossfield](https://github.com/iancrossfield), University of Arizona
+
 --
 
-Copyright © 2015 Hannu Parviainen <hannu.parviainen@physics.ox.ac.uk>
+Copyright © 2016 Hannu Parviainen <hannu.parviainen@physics.ox.ac.uk>
