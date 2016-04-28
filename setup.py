@@ -5,7 +5,7 @@ import distutils.sysconfig as ds
 long_description = ''
 
 setup(name='LDTk',
-      version='0.9',
+      version='1.0-beta',
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description=long_description,
       author='Hannu Parviainen',
