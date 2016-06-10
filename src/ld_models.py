@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import numpy as np
+from numpy import asarray
 
 class LDModel(object):
     npar = None
@@ -31,7 +32,7 @@ class LDModel(object):
         raise NotImplementedError
 
     @classmethod
-    def eval(cl,mu,pv):
+    def eval(cl, mu, pv):
         raise NotImplementedError
 
 
@@ -42,7 +43,9 @@ class LinearModel(LDModel):
     abbr = 'ln'
     
     @classmethod
-    def evaluate(cl,mu,pv):
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
         return 1. - pv[0]*(1.-mu)
 
 
@@ -53,7 +56,9 @@ class QuadraticModel(LDModel):
     abbr = 'qd'
     
     @classmethod
-    def evaluate(cl,mu,pv):
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
         return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu)**2
 
 
@@ -64,7 +69,9 @@ class NonlinearModel(LDModel):
     abbr = 'nl'
     
     @classmethod
-    def evaluate(cl,mu,pv):
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
         return (1. - (pv[0]*(1.-mu**0.5) + pv[1]*(1.-mu**0.5) +
                       pv[2]*(1.-mu**1.5) + pv[3]*(1.-mu**2  )))
 
@@ -76,7 +83,8 @@ class GeneralModel(LDModel):
     abbr = 'ge'
     
     @classmethod
-    def evaluate(cl,mu,pv):
+    def evaluate(cl, mu, pv):
+        mu = asarray(mu)
         return 1. - np.sum([c*(1.-mu**(i+1)) for i,c in enumerate(pv)], 0)
 
 
