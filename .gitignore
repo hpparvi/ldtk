@@ -55,3 +55,4 @@ target/
 
 *~
 notebooks/.ipynb_checkpoints/
+*.dropbox.attr
