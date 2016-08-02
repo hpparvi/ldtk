@@ -48,6 +48,19 @@ with warnings.catch_warnings():
     except (NameError,AttributeError,ImportError,TraitError):
         with_notebook = False
 
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()
+    mpi_size = comm.Get_size()
+    with_mpi = True
+except ImportError:
+    mpi_rank = 0
+    mpi_size = 1
+    with_mpi = False
+
+is_root = mpi_rank == 0
+
 ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
 ldtk_cache = join(ldtk_root,'cache')
 ldtk_server_file_list = join(ldtk_root, 'server_file_list.pkl')

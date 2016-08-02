@@ -22,19 +22,6 @@ from itertools import product
 from tqdm import tqdm
 from core import *
     
-try:
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    mpi_rank = comm.Get_rank()
-    mpi_size = comm.Get_size()
-    with_mpi = True
-except ImportError:
-    mpi_rank = 0
-    mpi_size = 1
-    with_mpi = False
-
-is_root = mpi_rank == 0
-
 class Client(object):
     def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'

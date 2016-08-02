@@ -23,17 +23,6 @@ from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-try:
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    mpi_rank = comm.Get_rank()
-    mpi_size = comm.Get_size()
-    with_mpi = True
-except ImportError:
-    mpi_rank = 0
-    mpi_size = 1
-    with_mpi = False
-
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 from client import Client
 from core import *
