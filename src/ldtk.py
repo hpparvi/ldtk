@@ -23,10 +23,20 @@ from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()
+    mpi_size = comm.Get_size()
+    with_mpi = True
+except ImportError:
+    mpi_rank = 0
+    mpi_size = 1
+    with_mpi = False
+
 from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
 from client import Client
 from core import *
-
 
 def load_ldpset(filename):
     with open(filename,'r') as fin:
@@ -269,8 +279,11 @@ class LDPSetCreator(object):
         self.nfilters = len(filters)
         self.qe       = qe or (lambda wl: 1.)
 
-        self.client.download_uncached_files(force=force_download)
-
+        if is_root:
+            self.client.download_uncached_files(force=force_download)
+        if with_mpi:
+            comm.Barrier()
+                
         ## Initialize the basic arrays
         ## ---------------------------
         with pf.open(self.files[0]) as hdul:

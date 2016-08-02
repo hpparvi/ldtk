@@ -19,9 +19,22 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from ftplib import FTP
 from itertools import product
+from tqdm import tqdm
 from core import *
     
-    
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    mpi_rank = comm.Get_rank()
+    mpi_size = comm.Get_size()
+    with_mpi = True
+except ImportError:
+    mpi_rank = 0
+    mpi_size = 1
+    with_mpi = False
+
+is_root = mpi_rank == 0
+
 class Client(object):
     def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
@@ -102,29 +115,29 @@ class Client(object):
 
     def download_uncached_files(self, force=False):
         """Downloads the uncached files to a local cache."""
-        ftp = FTP(self.eftp)
-        ftp.login()
-        ftp.cwd(self.edir)
 
         if self.not_cached > 0 or force:
-            pbar = ProgressBar(self.not_cached if not force else len(self.files))
-        
-        for fid,f in enumerate(self.files):
-            if not exists(join(ldtk_cache,f._zstr)):
-                os.mkdir(join(ldtk_cache,f._zstr))
-            if not f.local_exists or force:
-                ftp.cwd(f._zstr)
-                localfile = open(f.local_path, 'wb')
-                ftp.retrbinary('RETR '+f.name, localfile.write)
-                localfile.close()
-                ftp.cwd('..')
-                self.not_cached -= 1
-                pbar.increase()
-            else:
-                if self.verbosity > 1:
-                    print 'Skipping an existing file: ', f.name
-        ftp.close()
- 
+            ftp = FTP(self.eftp)
+            ftp.login()
+            ftp.cwd(self.edir)
+            
+            with tqdm(total=len(self.files)) as pb:
+                for fid,f in enumerate(self.files):
+                    if not exists(join(ldtk_cache,f._zstr)):
+                        os.mkdir(join(ldtk_cache,f._zstr))
+                    if not f.local_exists or force:
+                        ftp.cwd(f._zstr)
+                        localfile = open(f.local_path, 'wb')
+                        ftp.retrbinary('RETR '+f.name, localfile.write)
+                        localfile.close()
+                        ftp.cwd('..')
+                        self.not_cached -= 1
+                    else:
+                        if self.verbosity > 1:
+                            print 'Skipping an existing file: ', f.name
+                    pb.update(1)
+            ftp.close()
+
 
     @property
     def local_filenames(self):
