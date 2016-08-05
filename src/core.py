@@ -28,6 +28,7 @@ from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, on
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
 from traitlets import TraitError
+from tqdm import tqdm
 
 ## Test if we're running inside IPython
 ## ------------------------------------
@@ -62,13 +63,8 @@ except ImportError:
 is_root = mpi_rank == 0
 
 ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
-ldtk_cache = join(ldtk_root,'cache')
-ldtk_server_file_list = join(ldtk_root, 'server_file_list.pkl')
-
 if not exists(ldtk_root):
     os.mkdir(ldtk_root)
-if not exists(ldtk_cache):
-    os.mkdir(ldtk_cache)
 
 ## Constants
 ## =========
@@ -83,21 +79,7 @@ FN_TEMPLATE = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT
 ## =================
 
 def message(text):
-    if with_ipython:
-        display(HTML(text))
-    else:
-        print text
-
-class ProgressBar(object):
-    def __init__(self, max_v):
-        if with_notebook:
-            self.pb = IntProgress(value=0, max=max_v)
-            display(self.pb)
-
-    def increase(self, v=1):
-        if with_notebook:
-            self.pb.value += v
-
+    tqdm.write(text)
 
 def dxdx(f, x, h):
     return (f(x+h) - 2*f(x) + f(x-h)) / h**2
@@ -134,16 +116,17 @@ def a_lims_hilo(a,lo,hi):
 ## Utility classes
 ## ===============
 class SpecIntFile(object):
-    def __init__(self, teff, logg, z):
+    def __init__(self, teff, logg, z, cache):
         self.teff = int(teff)
         self.logg = logg
         self.z    = z
         self.name  = FN_TEMPLATE.format(teff=self.teff, logg=self.logg, z=self.z)
         self._zstr = 'Z'+self.name[13:17]
+        self.cache = cache
         
     @property
     def local_path(self):
-        return join(ldtk_cache,self._zstr,self.name)
+        return join(self.cache, self._zstr, self.name)
 
     @property
     def local_exists(self):

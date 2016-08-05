@@ -23,18 +23,24 @@ from tqdm import tqdm
 from core import *
     
 class Client(object):
-    def __init__(self, limits=None, verbosity=1, update_server_file_list=False):
+    def __init__(self, limits=None, verbosity=1, update_server_file_list=False, cache=None):
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
         self.files = None
         self.verbosity = verbosity
 
-        if exists(ldtk_server_file_list) and not update_server_file_list:
-            with open(ldtk_server_file_list, 'r') as fin:
+        self._cache = cache or join(ldtk_root,'cache')
+        self._server_file_list = join(ldtk_root, 'server_file_list.pkl')
+
+        if not exists(self._cache):
+            os.mkdir(self._cache)
+
+        if exists(self._server_file_list) and not update_server_file_list:
+            with open(self._server_file_list, 'r') as fin:
                 self.files_in_server = load(fin)
         else:
             self.files_in_server = self.get_server_file_list()
-            with open(ldtk_server_file_list, 'w') as fout:
+            with open(self._server_file_list, 'w') as fout:
                 dump(self.files_in_server, fout)
 
         if limits:
@@ -44,7 +50,7 @@ class Client(object):
     def _local_path(self, teff_or_fn, logg=None, z=None):
         """Creates the path to the local version of the file."""
         fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
-        return join(ldtk_cache,'Z'+fn[13:17],fn)
+        return join(self._cache,'Z'+fn[13:17],fn)
         
 
     def _local_exists(self, teff_or_fn, logg=None, z=None):
@@ -68,7 +74,7 @@ class Client(object):
         self.zs    = is_inside(Z_POINTS, z_lims)
         self.nz    = len(self.zs)
         self.pars  = [p for p in product(self.teffs,self.loggs,self.zs)]
-        self.files = [SpecIntFile(*p) for p in product(self.teffs,self.loggs,self.zs)]
+        self.files = [SpecIntFile(*p, cache=self._cache) for p in product(self.teffs,self.loggs,self.zs)]
         self.clean_file_list()
 
         self.not_cached =  len(self.files) - sum([f.local_exists for f in self.files])
@@ -108,10 +114,10 @@ class Client(object):
             ftp.login()
             ftp.cwd(self.edir)
             
-            with tqdm(total=len(self.files)) as pb:
+            with tqdm(desc='LDTk downloading uncached files', total=self.not_cached) as pb:
                 for fid,f in enumerate(self.files):
-                    if not exists(join(ldtk_cache,f._zstr)):
-                        os.mkdir(join(ldtk_cache,f._zstr))
+                    if not exists(join(self._cache,f._zstr)):
+                        os.mkdir(join(self._cache,f._zstr))
                     if not f.local_exists or force:
                         ftp.cwd(f._zstr)
                         localfile = open(f.local_path, 'wb')
@@ -119,10 +125,10 @@ class Client(object):
                         localfile.close()
                         ftp.cwd('..')
                         self.not_cached -= 1
+                        pb.update(1)
                     else:
                         if self.verbosity > 1:
                             print 'Skipping an existing file: ', f.name
-                    pb.update(1)
             ftp.close()
 
 

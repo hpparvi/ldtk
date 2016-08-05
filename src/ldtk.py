@@ -236,7 +236,7 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False, verbose=False): 
+    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False, verbose=False, cache=None): 
         """Note that (teff, logg, z) can all either be of the form (value, uncertainty)
            or alternatively they can be 1D arrays of posterior values."""
         self.teff  = teff
@@ -261,7 +261,7 @@ class LDPSetCreator(object):
             print "logg limits: ", logg_lims
             print "Fe/H limits: ", metal_lims
 
-        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims])
+        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache)
         self.files    = self.client.local_filenames
         self.filters  = filters
         self.nfiles   = len(self.files)
