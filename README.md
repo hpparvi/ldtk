@@ -63,7 +63,11 @@ The second approach can be used to constrain the LD model parameter space direct
 
 ## Installation
 
-Simple: clone the source from github and follow the basic Python package installation routine
+Use `pip`
+
+    pip install [--user] [--upgrade] ldtk
+
+or clone the source from github and follow the basic Python package installation routine
 
 ```bash
  git clone https://github.com/hpparvi/ldtk.git
