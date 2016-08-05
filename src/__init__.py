@@ -1,4 +1,4 @@
-from ldtk import LDPSetCreator, LDPSet
-from filters import BoxcarFilter, TabulatedFilter
+from ldtk.ldtk import LDPSetCreator, LDPSet
+from ldtk.filters import BoxcarFilter, TabulatedFilter
 
-__all__ = ['LDPSetCreator','LDPSet','BoxcarFilter','TabulatedFilter','ldtk_root']
+__all__ = ['LDPSetCreator','LDPSet','BoxcarFilter','TabulatedFilter']

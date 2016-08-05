@@ -23,9 +23,9 @@ from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-from ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
-from client import Client
-from core import *
+from ldtk.ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
+from ldtk.client import Client
+from ldtk.core import *
 
 def load_ldpset(filename):
     with open(filename,'r') as fin:
@@ -257,9 +257,9 @@ class LDPSetCreator(object):
             teff_lims, logg_lims, metal_lims = limits
 
         if verbose:
-            print "Teff limits: ", teff_lims
-            print "logg limits: ", logg_lims
-            print "Fe/H limits: ", metal_lims
+            print("Teff limits: " + str(teff_lims))
+            print("logg limits: " + str(logg_lims))
+            print("Fe/H limits: " + str(metal_lims))
 
         self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache)
         self.files    = self.client.local_filenames

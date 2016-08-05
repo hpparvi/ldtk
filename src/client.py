@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from ftplib import FTP
 from itertools import product
 from tqdm import tqdm
-from core import *
+from ldtk.core import *
     
 class Client(object):
     def __init__(self, limits=None, verbosity=1, update_server_file_list=False, cache=None):
@@ -128,7 +128,7 @@ class Client(object):
                         pb.update(1)
                     else:
                         if self.verbosity > 1:
-                            print 'Skipping an existing file: ', f.name
+                            print('Skipping an existing file: {:s}'.format(f.name))
             ftp.close()
 
 
