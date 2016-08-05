@@ -5,7 +5,7 @@ import distutils.sysconfig as ds
 long_description = ''
 
 setup(name='LDTk',
-      version='1.0-beta',
+      version='1.0-beta.1',
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description=long_description,
       author='Hannu Parviainen',
@@ -13,7 +13,7 @@ setup(name='LDTk',
       url='https://github.com/hpparvi/ldtk',
       package_dir={'ldtk':'src'},
       packages=['ldtk'],
-      install_requires=["numpy","scipy","astropy"],
+      install_requires=["numpy","scipy>=0.16","astropy","tqdm","traitlets"],
       license='GPLv2',
       classifiers=[
           "Topic :: Scientific/Engineering",
@@ -22,6 +22,7 @@ setup(name='LDTk',
           "Development Status :: 5 - Production/Stable",
           "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
           "Operating System :: OS Independent",
-          "Programming Language :: Python"
+          "Programming Language :: Python :: 2.7",
+          "Programming Language :: Python :: 3"
       ]
      )

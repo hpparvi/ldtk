@@ -17,15 +17,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-import pyfits as pf
 from functools import partial
 from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-from ldtk.ld_models import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
-from ldtk.client import Client
-from ldtk.core import *
+from .ldmodel import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
+from .client import Client
+from .core import *
 
 def load_ldpset(filename):
     with open(filename,'r') as fin:
@@ -54,7 +53,7 @@ class LDPSet(object):
 
         self._limb_i   = abs(diff(self._mean_orig.mean(0))).argmax()
         self._limb_z   = self._z_orig[self._limb_i]
-        self._limb_mu  = sqrt(1.-self._z_orig[i]**2)
+        self._limb_mu  = sqrt(1.-self._z_orig[self._limb_i]**2)
         self.redefine_limb()
 
         self._lnl     = zeros(self._nfilters)

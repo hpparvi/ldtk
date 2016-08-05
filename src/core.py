@@ -20,10 +20,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 import os
 from os.path import join, exists
 import warnings
-import pyfits as pf
+import astropy.io.fits as pf
 from glob import glob
 from os.path import exists, join, basename
-from cPickle import dump, load
+from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal

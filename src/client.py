@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from ftplib import FTP
 from itertools import product
 from tqdm import tqdm
-from ldtk.core import *
+from .core import *
     
 class Client(object):
     def __init__(self, limits=None, verbosity=1, update_server_file_list=False, cache=None):
@@ -36,7 +36,7 @@ class Client(object):
             os.mkdir(self._cache)
 
         if exists(self._server_file_list) and not update_server_file_list:
-            with open(self._server_file_list, 'r') as fin:
+            with open(self._server_file_list, 'rb') as fin:
                 self.files_in_server = load(fin)
         else:
             self.files_in_server = self.get_server_file_list()
