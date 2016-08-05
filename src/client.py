@@ -19,7 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from ftplib import FTP
 from itertools import product
-from tqdm import tqdm
 from .core import *
     
 class Client(object):

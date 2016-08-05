@@ -27,28 +27,13 @@ from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
-from traitlets import TraitError
-from tqdm import tqdm
+from tqdm import tqdm, tqdm_notebook
 
 ## Test if we're running inside IPython
 ## ------------------------------------
-try:
-    __IPYTHON__
-    from IPython.display import display, HTML
-    with_ipython = True
-except NameError:
-    with_ipython = False
-
+    
 warnings.filterwarnings('ignore')
-with warnings.catch_warnings():
-    try:
-        from IPython.display import display, clear_output
-        from IPython.html.widgets import IntProgress
-        w = IntProgress()
-        with_notebook = True
-    except (NameError,AttributeError,ImportError,TraitError):
-        with_notebook = False
-
+    
 try:
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
