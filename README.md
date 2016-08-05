@@ -52,9 +52,11 @@ The second approach can be used to constrain the LD model parameter space direct
 
 ## Requirements
 ### Core requirements
-- Python 2.7
+- Python 2.7 or Python 3
 - NumPy => 1.7
-- SciPy => 0.14
+- SciPy => 0.16
+- tqdm
+- astropy
 
 ### Notebooks
 - IPython => 3.0
