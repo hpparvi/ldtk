@@ -52,9 +52,9 @@ class LDPSet(object):
         self._mean_orig = self._mean.copy()
         self._std_orig  = self._std.copy()
 
-        self._limb_i   = abs(diff(self._mean.mean(0))).argmax()
-        self._limb_z   = self._z[i]
-        self._limb_mu  = sqrt(1.-self._z[i]**2)
+        self._limb_i   = abs(diff(self._mean_orig.mean(0))).argmax()
+        self._limb_z   = self._z_orig[self._limb_i]
+        self._limb_mu  = sqrt(1.-self._z_orig[i]**2)
         self.redefine_limb()
 
         self._lnl     = zeros(self._nfilters)
