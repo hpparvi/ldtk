@@ -19,10 +19,10 @@ filters = [BoxcarFilter('a', 450, 550),  # Define your passbands
 sc = LDPSetCreator(teff=(6400,   50),    # Define your star, and the code
                    logg=(4.50, 0.20),    # downloads the uncached stellar 
                       z=(0.25, 0.05),    # spectra from the Husser et al.
-                   filters=filters)      # FTP server automatically.
+                     filters=filters)    # FTP server automatically.
 
 ps = sc.create_profiles()                # Create the limb darkening profiles
-cq,eq = ps.coeffs_qd(do_mc=True)        # Estimate quadratic law coefficients
+cq,eq = ps.coeffs_qd(do_mc=True)         # Estimate quadratic law coefficients
 
 lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log 
                        [0.35,0.10],      # likelihood for a set of coefficients 
