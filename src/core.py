@@ -24,7 +24,7 @@ import astropy.io.fits as pf
 from glob import glob
 from os.path import exists, join, basename
 from pickle import dump, load
-from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete,
+from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete, append,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
 from tqdm import tqdm, tqdm_notebook
@@ -55,7 +55,9 @@ if not exists(ldtk_root):
 ## =========
 
 TWO_PI      = 2*pi
-TEFF_POINTS = delete(arange(2300,12001,100), [27])
+
+TEFF_POINTS = append(arange(2300,7001,100), arange(7200,12001,200)) # The database uses two TEFF step sizes
+TEFF_POINTS = delete(TEFF_POINTS, TEFF_POINTS.searchsorted(5000))   # The 5000 K data are missing from the database
 LOGG_POINTS = arange(0,6.1,0.5)
 Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, -0.0, 0.5, 1.0])
 FN_TEMPLATE = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
