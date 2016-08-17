@@ -50,7 +50,7 @@ class LinearModel(LDModel):
 
 
 class QuadraticModel(LDModel):
-    """Quadratic limb darkening model (Mandel & Agol, 2001)."""
+    """Quadratic limb darkening model (Kopal, 1950)."""
     npar = 2
     name = 'quadratic'
     abbr = 'qd'
@@ -62,8 +62,21 @@ class QuadraticModel(LDModel):
         return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu)**2
 
 
+class SquareRootModel(LDModel):
+    """Square root limb darkening model (van Hamme, 1993)."""
+    npar = 2
+    name = 'sqrt'
+    abbr = 'sq'
+
+    @classmethod
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
+        return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu**0.5)
+
+
 class NonlinearModel(LDModel):
-    """Nonlinear limb darkening model (Mandel & Agol, 2001)."""
+    """Nonlinear limb darkening model (Claret, 2000)."""
     npar = 4
     name = 'nonlinear'
     abbr = 'nl'
@@ -72,7 +85,7 @@ class NonlinearModel(LDModel):
     def evaluate(cl, mu, pv):
         assert len(pv) == cl.npar
         mu = asarray(mu)
-        return (1. - (pv[0]*(1.-mu**0.5) + pv[1]*(1.-mu**0.5) +
+        return (1. - (pv[0]*(1.-mu**0.5) + pv[1]*(1.-mu) +
                       pv[2]*(1.-mu**1.5) + pv[3]*(1.-mu**2  )))
 
 
@@ -90,5 +103,6 @@ class GeneralModel(LDModel):
 
 models = {'linear':    LinearModel,    
           'quadratic': QuadraticModel, 
+          'sqrt':      SquareRootModel,
           'nonlinear': NonlinearModel, 
           'general':   GeneralModel}

@@ -22,7 +22,7 @@ from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
-from .ldmodel import LinearModel, QuadraticModel, NonlinearModel, GeneralModel, models
+from .ldmodel import LinearModel, QuadraticModel, SquareRootModel, NonlinearModel, GeneralModel, models
 from .client import Client
 from .core import *
 
@@ -62,21 +62,25 @@ class LDPSet(object):
 
         self.lnlike_ln = partial(self._lnlike, ldmodel=LinearModel)
         self.lnlike_qd = partial(self._lnlike, ldmodel=QuadraticModel)
+        self.lnlike_sq = partial(self._lnlike, ldmodel=SquareRootModel)
         self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
         self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
 
         self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
         self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
+        self.coeffs_sq = partial(self._coeffs, ldmodel=SquareRootModel)
         self.coeffs_nl = partial(self._coeffs, ldmodel=NonlinearModel)
         self.coeffs_ge = partial(self._coeffs, ldmodel=GeneralModel)
 
         self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_sq.__doc__ = "Square root limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
 
         self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details." 
         self.coeffs_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
+        self.coeffs_sq.__doc__ = "Estimate the square root limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
 
