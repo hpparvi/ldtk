@@ -144,9 +144,9 @@ Hannu Parviainen, University of Oxford
 
 ## Contributors
 
-[Tom Louden](https://github.com/tomlouden), University of Warwick
-
-[Ian Crossfield](https://github.com/iancrossfield), University of Arizona
+- Rainer Wichmann, Hamburger Sternwarte, Universität Hamburg
+- [Tom Louden](https://github.com/tomlouden), University of Warwick
+- [Ian Crossfield](https://github.com/iancrossfield), University of Arizona
 
 --
 
