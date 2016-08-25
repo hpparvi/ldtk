@@ -239,9 +239,41 @@ class LDPSet(object):
 
 
 class LDPSetCreator(object):
-    def __init__(self, teff, logg, z, filters, qe=None, limits=None, force_download=False, verbose=False, cache=None): 
-        """Note that (teff, logg, z) can all either be of the form (value, uncertainty)
-           or alternatively they can be 1D arrays of posterior values."""
+    def __init__(self, teff, logg, z, filters,
+                 qe=None, limits=None, download_uncached=True,
+                 force_download=False, verbose=False, cache=None): 
+        """Creates a limb darkening profile set (LDPSet).
+
+        Parameters
+        ----------
+        teff : tuple or 1D ndarray
+            Effective stellar temperature either as a (value, uncertainty) tuple
+            or a 1D ndarray of posterior samples.
+
+        logg : tuple or 1D ndarray
+            Log g either as a (value, uncertainty) tuple or a 1D ndarray of posterior
+            samples.
+
+        metal : tuple or 1D ndarray
+            Stellar metallicity (z) either as a  (value, uncertainty) tuple or a
+            1D ndarray of posterior samples.
+
+        filters : list of Filter instances
+            List of filters defining the passbands for which to calculate the
+            stellar intensity profiles.
+
+        download_uncached : bool, optional
+            Try to download the uncached files from the FTP server. Can be set to False
+            if all the necessary files have been downloaded and working offline.
+
+        force_download: bool, optional
+            Download all the files from the FTP server, including the ones already in cache.
+
+        verbose : bool
+
+        cache : str, optional
+            Path to the cache directory.
+        """
         self.teff  = teff
         self.logg  = logg
         self.metal = z
@@ -271,7 +303,7 @@ class LDPSetCreator(object):
         self.nfilters = len(filters)
         self.qe       = qe or (lambda wl: 1.)
 
-        if is_root:
+        if is_root and download_uncached:
             self.client.download_uncached_files(force=force_download)
         if with_mpi:
             comm.Barrier()
