@@ -22,11 +22,12 @@ from itertools import product
 from .core import *
     
 class Client(object):
-    def __init__(self, limits=None, verbosity=1, update_server_file_list=False, cache=None):
+    def __init__(self, limits=None, verbosity=1, offline_mode=False, update_server_file_list=False, cache=None):
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
         self.files = None
         self.verbosity = verbosity
+        self.offline_mode = offline_mode
 
         self._cache = cache or join(ldtk_root,'cache')
         self._server_file_list = join(ldtk_root, 'server_file_list.pkl')

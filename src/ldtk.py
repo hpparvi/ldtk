@@ -240,7 +240,7 @@ class LDPSet(object):
 
 class LDPSetCreator(object):
     def __init__(self, teff, logg, z, filters,
-                 qe=None, limits=None, download_uncached=True,
+                 qe=None, limits=None, offline_mode=False,
                  force_download=False, verbose=False, cache=None): 
         """Creates a limb darkening profile set (LDPSet).
 
@@ -262,9 +262,9 @@ class LDPSetCreator(object):
             List of filters defining the passbands for which to calculate the
             stellar intensity profiles.
 
-        download_uncached : bool, optional
-            Try to download the uncached files from the FTP server. Can be set to False
-            if all the necessary files have been downloaded and working offline.
+        offline_mode : bool, optional
+            If True, skips any attempts to connect to the FTP server, and uses only cached
+            files.
 
         force_download: bool, optional
             Download all the files from the FTP server, including the ones already in cache.
@@ -303,7 +303,7 @@ class LDPSetCreator(object):
         self.nfilters = len(filters)
         self.qe       = qe or (lambda wl: 1.)
 
-        if is_root and download_uncached:
+        if is_root and not offline_mode:
             self.client.download_uncached_files(force=force_download)
         if with_mpi:
             comm.Barrier()
