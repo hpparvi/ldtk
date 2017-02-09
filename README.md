@@ -5,7 +5,7 @@
 [![arXiv](http://img.shields.io/badge/arXiv-1508.02634-blue.svg?style=flat)](http://arxiv.org/abs/1508.02634)
 [![ASCL](https://img.shields.io/badge/ASCL-1510.003-blue.svg?style=flat)](http://ascl.net/1510.003)
 [![DOI](https://zenodo.org/badge/5871/hpparvi/ldtk.svg)](https://zenodo.org/badge/latestdoi/5871/hpparvi/ldtk)
-
+[![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
 
 **Py**thon **L**imb **D**arkening **T**ool**k**it - a Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary passbands using the stellar spectrum model library by Husser et al (2013).
 
