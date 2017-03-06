@@ -190,7 +190,7 @@ class LDPSet(object):
                 chain[0,:] = qc
                 logl[0]    = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
 
-                for i in xrange(1,n_mc_samples):
+                for i in range(1,n_mc_samples):
                     pos_t  = multivariate_normal(chain[i-1], diag(s**2))
                     logl_t = self._lnlike(pos_t, flt=iflt, ldmodel=ldmodel)
                     if uniform() < exp(logl_t-logl[i-1]):
