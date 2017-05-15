@@ -40,7 +40,7 @@ class Client(object):
                 self.files_in_server = load(fin)
         else:
             self.files_in_server = self.get_server_file_list()
-            with open(self._server_file_list, 'w') as fout:
+            with open(self._server_file_list, 'wb') as fout:
                 dump(self.files_in_server, fout)
 
         if limits:
@@ -88,7 +88,7 @@ class Client(object):
         ftp.cwd(self.edir)
         files_in_server = {}
         zdirs = sorted(ftp.nlst())
-        for zdir in zdirs:
+        for zdir in tqdm(zdirs, desc='Updating server file list'):
             ftp.cwd(zdir)
             files_in_server[zdir] = sorted(ftp.nlst())
             ftp.cwd('..')
