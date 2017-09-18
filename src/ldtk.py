@@ -30,8 +30,6 @@ def load_ldpset(filename):
     with open(filename, 'rb') as fin:
         return LDPSet(load(fin), load(fin), load(fin))
 
-#TODO: Give an option to use Kernel density estimation if given a set of teff,logg,z samples.
-
 # Main classes
 # ============
 class LDPSet(object):
