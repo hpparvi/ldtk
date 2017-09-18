@@ -27,13 +27,13 @@ from .client import Client
 from .core import *
 
 def load_ldpset(filename):
-    with open(filename,'r') as fin:
+    with open(filename, 'rb') as fin:
         return LDPSet(load(fin), load(fin), load(fin))
 
-##TODO: Give an option to use Kernel density estimation if given a set of teff,logg,z samples.
+#TODO: Give an option to use Kernel density estimation if given a set of teff,logg,z samples.
 
-## Main classes
-## ============        
+# Main classes
+# ============
 class LDPSet(object):
     def __init__(self, filters, mu, ldp_samples):
         self._filters  = filters 
@@ -86,7 +86,7 @@ class LDPSet(object):
 
         
     def save(self, filename):
-        with open(filename,'w') as f:
+        with open(filename, 'wb') as f:
             dump(self._filters, f)
             dump(self._mu_orig, f)
             dump(self._ldps_orig, f)
