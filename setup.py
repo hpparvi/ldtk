@@ -1,13 +1,9 @@
-from numpy.distutils.core import setup, Extension
-from numpy.distutils.misc_util import Configuration
-import distutils.sysconfig as ds
-
-long_description = ''
+from setuptools import setup
 
 setup(name='LDTk',
-      version='1.0-beta.4',
+      version='1.0',
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
-      long_description=long_description,
+      long_description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       author='Hannu Parviainen',
       author_email='hpparvi@gmail.com',
       url='https://github.com/hpparvi/ldtk',
@@ -24,5 +20,6 @@ setup(name='LDTk',
           "Operating System :: OS Independent",
           "Programming Language :: Python :: 2.7",
           "Programming Language :: Python :: 3"
-      ]
+      ],
+      keywords= 'astronomy astrophysics exoplanets'
      )
