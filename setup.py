@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='LDTk',
       version='1.0',
@@ -7,9 +7,9 @@ setup(name='LDTk',
       author='Hannu Parviainen',
       author_email='hpparvi@gmail.com',
       url='https://github.com/hpparvi/ldtk',
-      package_dir={'ldtk':'src'},
-      packages=['ldtk'],
-      install_requires=["numpy","scipy>=0.16","astropy","tqdm","traitlets"],
+      packages=find_packages(),
+      install_requires=["numpy", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
+      include_package_data=True,
       license='GPLv2',
       classifiers=[
           "Topic :: Scientific/Engineering",
