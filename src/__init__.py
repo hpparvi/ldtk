@@ -1,5 +1,5 @@
 from .ldmodel import *
-from .ldtk import LDPSetCreator, LDPSet
+from .ldtk import LDPSetCreator, LDPSet, load_ldpset
 from .filters import BoxcarFilter, TabulatedFilter
 
-__all__ = ['LDPSetCreator','LDPSet','BoxcarFilter','TabulatedFilter']
+__all__ = ['LDPSetCreator', 'LDPSet', 'load_ldpset', 'BoxcarFilter', 'TabulatedFilter']
