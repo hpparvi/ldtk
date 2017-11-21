@@ -13,19 +13,19 @@
 from ldtk import LDPSetCreator, BoxcarFilter
 
 filters = [BoxcarFilter('a', 450, 550),  # Define your passbands
-           BoxcarFilter('b', 650, 750),  # - Boxcar filters useful in 
+           BoxcarFilter('b', 650, 750),  # - Boxcar filters useful in
            BoxcarFilter('c', 850, 950)]  #   transmission spectroscopy
 
 sc = LDPSetCreator(teff=(6400,   50),    # Define your star, and the code
-                   logg=(4.50, 0.20),    # downloads the uncached stellar 
+                   logg=(4.50, 0.20),    # downloads the uncached stellar
                       z=(0.25, 0.05),    # spectra from the Husser et al.
                      filters=filters)    # FTP server automatically.
 
 ps = sc.create_profiles()                # Create the limb darkening profiles
 cq,eq = ps.coeffs_qd(do_mc=True)         # Estimate quadratic law coefficients
 
-lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log 
-                       [0.35,0.10],      # likelihood for a set of coefficients 
+lnlike = ps.lnlike_qd([[0.45,0.15],      # Calculate the quadratic law log
+                       [0.35,0.10],      # likelihood for a set of coefficients
                        [0.25,0.05]])     # (returns the joint likelihood)
 
 lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quad. law log L for the first filter
@@ -88,9 +88,10 @@ The ``LDPSet`` class offers methods to calculate log likelihoods for a set of li
  - ``lnlike_qd`` : Quadratic model
  - ``lnlike_nl`` : Nonlinear model
  - ``lnlike_gn`` : General model
+ - ``lnlike_p2`` : Power-2 model
 
 ## Resampling
-The limb darkening profiles can be resampled to a desired sampling in ``mu`` using the resampling methods in the ``LDPSet``. 
+The limb darkening profiles can be resampled to a desired sampling in ``mu`` using the resampling methods in the ``LDPSet``.
 
  - ``resample_linear_z(nz=100)``: Resample the profiles to be linear in z
  - ``resample_linear_mu(nmu=100)``: Resample the profiles to be linear in mu
@@ -107,8 +108,8 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
 If you use PyLDTk in your research, please cite the PyLDTk paper
 
     Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
-    
-and the paper describing the spectrum library without which PyLDTk would be rather useless 
+
+and the paper describing the spectrum library without which PyLDTk would be rather useless
 
     Husser, T.-O. et al. A&A 553, A6 (2013) (DOI:10.1051/0004-6361/201219058).
 

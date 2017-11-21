@@ -34,7 +34,7 @@ def load_ldpset(filename):
 # ============
 class LDPSet(object):
     def __init__(self, filters, mu, ldp_samples):
-        self._filters  = filters 
+        self._filters  = filters
         self._nfilters = len(filters)
         self._mu       = mu
         self._z        = sqrt(1-mu**2)
@@ -63,26 +63,30 @@ class LDPSet(object):
         self.lnlike_sq = partial(self._lnlike, ldmodel=SquareRootModel)
         self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
         self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
+        self.lnlike_p2 = partial(self._lnlike, ldmodel=Power2Model)
 
         self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
         self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
         self.coeffs_sq = partial(self._coeffs, ldmodel=SquareRootModel)
         self.coeffs_nl = partial(self._coeffs, ldmodel=NonlinearModel)
         self.coeffs_ge = partial(self._coeffs, ldmodel=GeneralModel)
+        self.coeffs_p2 = partial(self._coeffs, ldmodel=Power2Model)
 
         self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_sq.__doc__ = "Square root limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_p2.__doc__ = "Power-2 limb darkening model\n(coeffs, join=True, flt=None)"
 
-        self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details." 
+        self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_sq.__doc__ = "Estimate the square root limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
+        self.coeffs_p2.__doc__ = "Estimate the power-2 limb darkening model coefficients, see LPDSet._coeffs for details."
 
-        
+
     def save(self, filename):
         with open(filename, 'wb') as f:
             dump(self._filters, f)
@@ -107,13 +111,13 @@ class LDPSet(object):
     def set_limb_mu(self, mu):
         self._limb_mu = mu
         self._limb_i  = argmin(abs(self._mu_orig-mu))
-        self._limb_z = sqrt(1.-mu**2) 
+        self._limb_z = sqrt(1.-mu**2)
         self.reset_sampling()
 
 
     def redefine_limb(self):
         self._z  = self._z_orig[self._limb_i:] / self._limb_z
-        self._mu = sqrt(1.-self._z**2) 
+        self._mu = sqrt(1.-self._z**2)
         self._ldps = self._ldps_orig[:,:,self._limb_i:].copy()
         self._mean = self._mean_orig[:,self._limb_i:].copy()
         self._std  = self._std_orig[:,self._limb_i:].copy()
@@ -122,7 +126,7 @@ class LDPSet(object):
     def set_uncertainty_multiplier(self, em):
         self._em      = em
         self._update()
-        
+
 
     def reset_sampling(self):
         self.redefine_limb()
@@ -131,20 +135,20 @@ class LDPSet(object):
 
     def resample_linear_z(self, nz=100):
         self.resample(z=linspace(0,1,nz))
- 
+
 
     def resample_linear_mu(self, nmu=100):
         self.resample(mu=linspace(0,1,nmu))
-     
+
 
     def resample(self, mu=None, z=None):
         muc = self._mu.copy()
         if z is not None:
             self._z  = z
-            self._mu = sqrt(1-self._z**2) 
+            self._mu = sqrt(1-self._z**2)
         elif mu is not None:
             self._mu = mu
-            self._z  = sqrt(1-self._mu**2) 
+            self._z  = sqrt(1-self._mu**2)
 
         self._mean = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._mean])
         self._std  = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
@@ -184,7 +188,7 @@ class LDPSet(object):
             if do_mc:
                 logl  = zeros(n_mc_samples)
                 chain = zeros([n_mc_samples,npar])
-                
+
                 chain[0,:] = qc
                 logl[0]    = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
 
@@ -213,7 +217,7 @@ class LDPSet(object):
 
         return array(qcs), array(covs)
 
-            
+
     def _lnlike(self, ldcs, joint=True, flt=None, ldmodel=QuadraticModel):
         if flt is None:
             for fid, ldc in enumerate(asarray(ldcs).reshape([self._nfilters,-1])):
@@ -239,7 +243,7 @@ class LDPSet(object):
 class LDPSetCreator(object):
     def __init__(self, teff, logg, z, filters,
                  qe=None, limits=None, offline_mode=False,
-                 force_download=False, verbose=False, cache=None): 
+                 force_download=False, verbose=False, cache=None):
         """Creates a limb darkening profile set (LDPSet).
 
         Parameters
@@ -281,7 +285,7 @@ class LDPSetCreator(object):
                 return a_lims_hilo(pts, *percentile(ms_or_samples, plims))
             else:
                 return a_lims(pts, *ms_or_samples)
-        
+
         if not limits:
             teff_lims  = set_lims(teff, TEFF_POINTS)
             logg_lims  = set_lims(logg, LOGG_POINTS)
@@ -305,7 +309,7 @@ class LDPSetCreator(object):
             self.client.download_uncached_files(force=force_download)
         if with_mpi:
             comm.Barrier()
-                
+
         ## Initialize the basic arrays
         ## ---------------------------
         with pf.open(self.files[0]) as hdul:
@@ -316,7 +320,7 @@ class LDPSetCreator(object):
             self.mu   = hdul[1].data
             self.z    = sqrt(1-self.mu**2)
             self.nmu  = self.mu.size
-        
+
         ## Read in the fluxes
         ## ------------------
         self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu])
@@ -330,8 +334,8 @@ class LDPSetCreator(object):
         ## -----------------------------
         points = array([[f.teff,f.logg,f.z] for f in self.client.files])
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
-         
-        
+
+
     def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None):
         """Creates a set of limb darkening profiles
 
@@ -341,7 +345,7 @@ class LDPSetCreator(object):
            teff  : array_like [optional]
            logg  : array_like [optional]
            metal : array_like [optional]
-            
+
            Notes
            -----
            Teff, logg, and z are by default read in from the previously-created
@@ -355,13 +359,13 @@ class LDPSetCreator(object):
         teff  = sample(teff,  self.teff)
         logg  = sample(logg,  self.logg)
         metal = sample(metal, self.metal)
-    
+
         minsize = min(nsamples, min(map(len, [teff, logg, metal])))
         samples = ones([minsize,3])
         samples[:,0] = clip(teff,  *self.client.teffl)[:minsize]
         samples[:,1] = clip(logg,  *self.client.loggl)[:minsize]
         samples[:,2] = clip(metal, *self.client.zl)[:minsize]
-        
+
         self.ldp_samples = zeros([self.nfilters, minsize, self.nmu])
         for iflt in range(self.nfilters):
             self.ldp_samples[iflt,:,:] = self.itps[iflt](samples)
@@ -371,4 +375,3 @@ class LDPSetCreator(object):
     @property
     def filter_names(self):
         return [f.name for f in self.filters]
-
