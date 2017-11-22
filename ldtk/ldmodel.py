@@ -24,7 +24,7 @@ class LDModel(object):
     npar = None
     name = None
     abbr = None
-    
+
     def __init__(self):
         raise NotImplementedError
 
@@ -41,7 +41,7 @@ class LinearModel(LDModel):
     npar = 1
     name = 'linear'
     abbr = 'ln'
-    
+
     @classmethod
     def evaluate(cl, mu, pv):
         assert len(pv) == cl.npar
@@ -54,7 +54,7 @@ class QuadraticModel(LDModel):
     npar = 2
     name = 'quadratic'
     abbr = 'qd'
-    
+
     @classmethod
     def evaluate(cl, mu, pv):
         assert len(pv) == cl.npar
@@ -80,7 +80,7 @@ class NonlinearModel(LDModel):
     npar = 4
     name = 'nonlinear'
     abbr = 'nl'
-    
+
     @classmethod
     def evaluate(cl, mu, pv):
         assert len(pv) == cl.npar
@@ -94,15 +94,28 @@ class GeneralModel(LDModel):
     npar = None
     name = 'general'
     abbr = 'ge'
-    
+
     @classmethod
     def evaluate(cl, mu, pv):
         mu = asarray(mu)
         return 1. - np.sum([c*(1.-mu**(i+1)) for i,c in enumerate(pv)], 0)
 
+class Power2Model(LDModel):
+    """Power-2 limb darkening model (Morello et al, 2017)."""
+    npar = 2
+    name = 'power2'
+    abbr = 'p2'
 
-models = {'linear':    LinearModel,    
-          'quadratic': QuadraticModel, 
+    @classmethod
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
+        return 1. - pv[0]*(1.-(mu**pv[1]))
+
+
+models = {'linear':    LinearModel,
+          'quadratic': QuadraticModel,
           'sqrt':      SquareRootModel,
-          'nonlinear': NonlinearModel, 
-          'general':   GeneralModel}
+          'nonlinear': NonlinearModel,
+          'general':   GeneralModel,
+          'power2':    Power2Model}
