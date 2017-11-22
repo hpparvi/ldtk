@@ -86,7 +86,7 @@ class BoxcarFilter(Filter):
         w[(wl>self.wl_min) & (wl<self.wl_max)] = 1.
         return w
 
-sdss_g = BoxcarFilter("g'", 400, 550)
+sdss_g = BoxcarFilter("g'", 400, 550) #: SDSS G filter
 sdss_r = BoxcarFilter("r'", 570, 690)
 sdss_i = BoxcarFilter("i'", 710, 790)
 sdss_z = BoxcarFilter("z'", 810, 900)

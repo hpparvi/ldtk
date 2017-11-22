@@ -33,6 +33,18 @@ def load_ldpset(filename):
 # Main classes
 # ============
 class LDPSet(object):
+    """Limb darkening profile set
+
+    Parameters
+    ----------
+    filters : list
+        List of Filter-instances defining the passbands
+    mu : array_like
+        Array of mu values
+    ldp_samples : list
+        A list containing arrays of limb darkening profile samples for each filter
+
+    """
     def __init__(self, filters, mu, ldp_samples):
         self._filters  = filters
         self._nfilters = len(filters)
@@ -88,6 +100,13 @@ class LDPSet(object):
 
 
     def save(self, filename):
+        """Saves the LDPSet as a pickle
+
+        Parameters
+        ----------
+        filename : string
+            Filename
+        """
         with open(filename, 'wb') as f:
             dump(self._filters, f)
             dump(self._mu_orig, f)
@@ -102,6 +121,13 @@ class LDPSet(object):
 
 
     def set_limb_z(self, z):
+        """Set the z value that defines the edge of the stellar disk
+
+        Parameters
+        ----------
+        z : float
+            The z that defines the edge of the stellar disk
+        """
         self._limb_z = z
         self._limb_i = argmin(abs(self._z_orig-z))
         self._limb_mu = sqrt(1.-z**2)
@@ -232,50 +258,55 @@ class LDPSet(object):
 
     @property
     def profile_averages(self):
+        """The average limb darkening profiles for each passband
+        """
         return self._mean
 
 
     @property
     def profile_uncertainties(self):
+        """The limb darkening profile uncertainties for each passband
+        """
         return self._std
 
 
 class LDPSetCreator(object):
+    """Creates a limb darkening profile set.
+
+    Parameters
+    ----------
+    teff : tuple or 1D ndarray
+        Effective stellar temperature either as a (value, uncertainty) tuple
+        or a 1D ndarray of posterior samples.
+
+    logg : tuple or 1D ndarray
+        Log g either as a (value, uncertainty) tuple or a 1D ndarray of posterior
+        samples.
+
+    metal : tuple or 1D ndarray
+        Stellar metallicity (z) either as a  (value, uncertainty) tuple or a
+        1D ndarray of posterior samples.
+
+    filters : list of Filter instances
+        List of filters defining the passbands for which to calculate the
+        stellar intensity profiles.
+
+    offline_mode : bool, optional
+        If True, skips any attempts to connect to the FTP server, and uses only cached
+        files.
+
+    force_download: bool, optional
+        Download all the files from the FTP server, including the ones already in cache.
+
+    verbose : bool
+
+    cache : str, optional
+        Path to the cache directory.
+    """
     def __init__(self, teff, logg, z, filters,
                  qe=None, limits=None, offline_mode=False,
                  force_download=False, verbose=False, cache=None):
-        """Creates a limb darkening profile set (LDPSet).
 
-        Parameters
-        ----------
-        teff : tuple or 1D ndarray
-            Effective stellar temperature either as a (value, uncertainty) tuple
-            or a 1D ndarray of posterior samples.
-
-        logg : tuple or 1D ndarray
-            Log g either as a (value, uncertainty) tuple or a 1D ndarray of posterior
-            samples.
-
-        metal : tuple or 1D ndarray
-            Stellar metallicity (z) either as a  (value, uncertainty) tuple or a
-            1D ndarray of posterior samples.
-
-        filters : list of Filter instances
-            List of filters defining the passbands for which to calculate the
-            stellar intensity profiles.
-
-        offline_mode : bool, optional
-            If True, skips any attempts to connect to the FTP server, and uses only cached
-            files.
-
-        force_download: bool, optional
-            Download all the files from the FTP server, including the ones already in cache.
-
-        verbose : bool
-
-        cache : str, optional
-            Path to the cache directory.
-        """
         self.teff  = teff
         self.logg  = logg
         self.metal = z
