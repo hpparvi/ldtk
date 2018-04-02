@@ -18,7 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import numpy as np
-from numpy import asarray
+from numpy import asarray, sqrt
 
 class LDModel(object):
     npar = None
@@ -60,6 +60,21 @@ class QuadraticModel(LDModel):
         assert len(pv) == cl.npar
         mu = asarray(mu)
         return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu)**2
+
+
+class TriangularQuadraticModel(LDModel):
+    """Quadratic limb darkening model with the parametrisation described by Kipping (MNRAS 435, 2013)."""
+    npar = 2
+    name = 'triangular_quadratic'
+    abbr = 'tq'
+
+    @classmethod
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
+        a, b = sqrt(pv[0]), 2*pv[1]
+        u, v = a*b, a*(1. - b)
+        return 1. - u*(1.-mu) - v*(1.-mu)**2
 
 
 class SquareRootModel(LDModel):
@@ -115,6 +130,7 @@ class Power2Model(LDModel):
 
 models = {'linear':    LinearModel,
           'quadratic': QuadraticModel,
+          'triquadratic': TriangularQuadraticModel,
           'sqrt':      SquareRootModel,
           'nonlinear': NonlinearModel,
           'general':   GeneralModel,
