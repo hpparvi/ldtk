@@ -86,6 +86,7 @@ The ``LDPSet`` class offers methods to calculate log likelihoods for a set of li
 
  - ``lnlike_ln`` : Linear model
  - ``lnlike_qd`` : Quadratic model
+ - ``lnlike_tq`` : Quadratic model with triangular parametrization (Kipping 2013)
  - ``lnlike_nl`` : Nonlinear model
  - ``lnlike_gn`` : General model
  - ``lnlike_p2`` : Power-2 model
