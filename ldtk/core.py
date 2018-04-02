@@ -29,9 +29,6 @@ from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, on
 from numpy.random import normal, uniform, multivariate_normal
 from tqdm import tqdm, tqdm_notebook
 
-## Test if we're running inside IPython
-## ------------------------------------
-    
 warnings.filterwarnings('ignore')
     
 try:
