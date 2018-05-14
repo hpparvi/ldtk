@@ -18,7 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import numpy as np
-from numpy import asarray, sqrt
+from numpy import asarray, sqrt, log2
+
 
 class LDModel(object):
     npar = None
@@ -127,6 +128,20 @@ class Power2Model(LDModel):
         mu = asarray(mu)
         return 1. - pv[0]*(1.-(mu**pv[1]))
 
+class Power2MPModel(LDModel):
+    """Power-2 limb darkening model with an alternative parametrisation (Maxted, P.F.L., 2018)."""
+    npar = 2
+    name = 'power2mp'
+    abbr = 'p2mp'
+
+    @classmethod
+    def evaluate(cl, mu, pv):
+        assert len(pv) == cl.npar
+        mu = asarray(mu)
+        c = 1 - pv[0] + pv[1]
+        a = log2(c/pv[1])
+        return 1. - c*(1.-(mu**a))
+
 
 models = {'linear':    LinearModel,
           'quadratic': QuadraticModel,
@@ -134,4 +149,6 @@ models = {'linear':    LinearModel,
           'sqrt':      SquareRootModel,
           'nonlinear': NonlinearModel,
           'general':   GeneralModel,
-          'power2':    Power2Model}
+          'power2':    Power2Model,
+          'power2mp': Power2MPModel}
+

@@ -23,7 +23,7 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
-                      GeneralModel, Power2Model, models)
+                      GeneralModel, Power2Model, Power2MPModel, models)
 from .client import Client
 from .core import *
 
@@ -78,6 +78,8 @@ class LDPSet(object):
         self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
         self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
         self.lnlike_p2 = partial(self._lnlike, ldmodel=Power2Model)
+        self.lnlike_p2mp = partial(self._lnlike, ldmodel=Power2MPModel)
+
 
         self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
         self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
@@ -86,6 +88,7 @@ class LDPSet(object):
         self.coeffs_nl = partial(self._coeffs, ldmodel=NonlinearModel)
         self.coeffs_ge = partial(self._coeffs, ldmodel=GeneralModel)
         self.coeffs_p2 = partial(self._coeffs, ldmodel=Power2Model)
+        self.coeffs_p2mp = partial(self._coeffs, ldmodel=Power2MPModel)
 
         self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
@@ -94,6 +97,7 @@ class LDPSet(object):
         self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
         self.lnlike_p2.__doc__ = "Power-2 limb darkening model\n(coeffs, join=True, flt=None)"
+        self.lnlike_p2mp.__doc__ = "Power-2 limb darkening model with an alternative parametrisation\n(coeffs, join=True, flt=None)"
 
         self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
@@ -102,6 +106,7 @@ class LDPSet(object):
         self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_p2.__doc__ = "Estimate the power-2 limb darkening model coefficients, see LPDSet._coeffs for details."
+        self.coeffs_p2mp.__doc__ = "Estimate the power-2 MP limb darkening model coefficients, see LPDSet._coeffs for details."
 
 
     def save(self, filename):
