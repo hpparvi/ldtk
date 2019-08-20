@@ -22,7 +22,7 @@ import numpy as np
 from numba import njit
 from numpy import ndarray, asarray, sqrt, log2, atleast_2d, zeros
 
-from .models import m_quadratic
+from .models import m_quadratic, m_triangular
 
 @njit
 def _get_dims(mu, pv):
@@ -83,11 +83,7 @@ class TriangularQuadraticModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        assert len(pv) == cls.npar
-        mu = asarray(mu)
-        a, b = sqrt(pv[0]), 2*pv[1]
-        u, v = a*b, a*(1. - b)
-        return 1. - u*(1.-mu) - v*(1.-mu)**2
+        return m_triangular(mu, pv)
 
 
 class SquareRootModel(LDModel):
