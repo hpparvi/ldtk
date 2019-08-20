@@ -18,6 +18,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 from functools import partial
+
+from numpy import argmin
+from numba import njit
 from scipy.interpolate import LinearNDInterpolator as NDI
 from scipy.interpolate import interp1d
 from scipy.optimize import fmin
@@ -26,10 +29,35 @@ from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, Squ
                       GeneralModel, Power2Model, Power2MPModel, models)
 from .client import Client
 from .core import *
+from .models import m_quadratic
 
 def load_ldpset(filename):
     with open(filename, 'rb') as fin:
         return LDPSet(load(fin), load(fin), load(fin))
+
+@njit
+def lnlike1d(model, fid, _lnc1, _lnc2, _mean, _err2):
+    return _lnc1 + _lnc2[fid] -0.5*((_mean[fid]-model)**2/_err2[fid]).sum()
+
+@njit
+def lnlike2d(model, _lnc1, _lnc2, _mean, _err2):
+    nfilters = model.shape[0]
+    lnl = 0.0
+    for fid in range(nfilters):
+        lnl += _lnc1 + _lnc2[fid] - 0.5 * ((_mean[fid] - model[fid]) ** 2 / _err2[fid]).sum()
+    return lnl
+
+
+@njit
+def lnlike3d(model, _lnc1, _lnc2, _mean, _err2):
+    npv = model.shape[0]
+    nfilters = model.shape[1]
+
+    lnl = zeros(npv)
+    for ipv in range(npv):
+        for fid in range(nfilters):
+            lnl[ipv] += _lnc1 + _lnc2[fid] - 0.5 * ((_mean[fid] - model[ipv, fid]) ** 2 / _err2[fid]).sum()
+    return lnl
 
 # Main classes
 # ============
@@ -46,6 +74,9 @@ class LDPSet(object):
         A list containing arrays of limb darkening profile samples for each filter
 
     """
+
+    models = {'quadratic': m_quadratic}
+
     def __init__(self, filters, mu, ldp_samples):
         self._filters  = filters
         self._nfilters = len(filters)
@@ -125,9 +156,9 @@ class LDPSet(object):
 
     def _update(self):
         self._nmu      = self._mu.size
-        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                    ## 1st ln likelihood term
-        self._lnc2    = [-log(self._em*e).sum() for e in self._std]   ## 2nd ln likelihood term
-        self._err2    = [(self._em*e)**2 for e in self._std]          ## variances
+        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                           ## 1st ln likelihood term
+        self._lnc2    = array([-log(self._em*e).sum() for e in self._std])   ## 2nd ln likelihood term
+        self._err2    = array([(self._em*e)**2 for e in self._std])          ## variances
 
 
     def set_limb_z(self, z):
@@ -192,7 +223,7 @@ class LDPSet(object):
 
 
     def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
-                ldmodel=QuadraticModel, ngc=4):
+                ldmodel = QuadraticModel, ngc=4):
         """
         Estimate the limb darkening coefficients and their uncertainties for a given limb darkening  model.
 
@@ -253,18 +284,22 @@ class LDPSet(object):
 
         return array(qcs), array(covs)
 
-
     def _lnlike(self, ldcs, joint=True, flt=None, ldmodel=QuadraticModel):
-        if flt is None:
-            for fid, ldc in enumerate(asarray(ldcs).reshape([self._nfilters,-1])):
-                model = ldmodel.evaluate(self._mu, ldc)
-                self._lnl[fid] = self._lnc1 + self._lnc2[fid] -0.5*((self._mean[fid]-model)**2/self._err2[fid]).sum()
-            return self._lnl.sum() if joint else self._lnl
-        else:
-            model = ldmodel.evaluate(self._mu, asarray(ldcs))
-            self._lnl[flt] = self._lnc1 + self._lnc2[flt] -0.5*((self._mean[flt]-model)**2/self._err2[flt]).sum()
-            return self._lnl[flt]
+        if not joint:
+            raise DeprecationWarning(
+                "The argument 'joint' has been deprecated since LDTk 1.1 and will be removed in the future.")
+        if (ldcs.ndim == 1) and (flt is None) and (self._nfilters > 1):
+            raise ValueError(
+                'Need to give the filter id `flt` if evaluating a single set of coefficients with multiple filters defined.')
 
+        m = ldmodel.evaluate(self._mu, ldcs)
+
+        if flt is not None:
+            return lnlike1d(m, flt, self._lnc1, self._lnc2, self._mean, self._err2)
+        elif ldcs.ndim == 2:
+            return lnlike2d(m, self._lnc1, self._lnc2, self._mean, self._err2)
+        elif ldcs.ndim == 3:
+            return lnlike3d(m, self._lnc1, self._lnc2, self._mean, self._err2)
 
     @property
     def profile_averages(self):

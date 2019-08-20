@@ -8,7 +8,7 @@ setup(name='LDTk',
       author_email='hpparvi@gmail.com',
       url='https://github.com/hpparvi/ldtk',
       packages=find_packages(),
-      install_requires=["numpy", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
+      install_requires=["numpy", "numba", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
       include_package_data=True,
       license='GPLv2',
       classifiers=[

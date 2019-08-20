@@ -1,0 +1,1 @@
+from .quadratic import m_quadratic

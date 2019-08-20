@@ -22,6 +22,8 @@ import numpy as np
 from numba import njit
 from numpy import ndarray, asarray, sqrt, log2, atleast_2d, zeros
 
+from .models import m_quadratic
+
 @njit
 def _get_dims(mu, pv):
     if pv.ndim == 1:
@@ -70,9 +72,7 @@ class QuadraticModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        assert len(pv) == cls.npar
-        mu = asarray(mu)
-        return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu)**2
+        return m_quadratic(mu, pv)
 
 
 class TriangularQuadraticModel(LDModel):
