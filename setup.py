@@ -10,6 +10,7 @@ setup(name='LDTk',
       packages=find_packages(),
       install_requires=["numpy", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
       include_package_data=True,
+      package_data={'ldtk': ['filter_files/*','filter_files/gtc/osiris/*']},
       license='GPLv2',
       classifiers=[
           "Topic :: Scientific/Engineering",
