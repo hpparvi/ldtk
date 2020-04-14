@@ -17,6 +17,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
+import pandas as pd
+
+from pathlib import Path
 from numpy import array, argsort, zeros_like, arange, loadtxt, linspace
 from scipy.interpolate import interp1d
 
@@ -86,7 +89,13 @@ class BoxcarFilter(Filter):
         w[(wl>self.wl_min) & (wl<self.wl_max)] = 1.
         return w
 
-sdss_g = BoxcarFilter("g'", 400, 550) #: SDSS G filter
+
+def create_tess():
+    df = pd.read_csv(Path(__file__).parent.joinpath('filter_files','tess.csv'), comment='#', header=None, names=['wavelength','response'])
+    return TabulatedFilter('TESS', df.wavelength.values, df.response.values)
+
+
+sdss_g = BoxcarFilter("g'", 400, 550)
 sdss_r = BoxcarFilter("r'", 570, 690)
 sdss_i = BoxcarFilter("i'", 710, 790)
 sdss_z = BoxcarFilter("z'", 810, 900)
@@ -97,4 +106,6 @@ kepler = TabulatedFilter('kepler',
                                 0.541, 0.490, 0.468, 0.400, 0.332, 0.279, 0.020, 0.000,
                                 0.000]))
 
-__all__ = 'Filter TabulatedFilter BoxcarFilter sdss_g sdss_r sdss_i sdss_z kepler'.split()
+tess = create_tess()
+
+__all__ = 'Filter TabulatedFilter BoxcarFilter sdss_g sdss_r sdss_i sdss_z kepler tess'.split()
