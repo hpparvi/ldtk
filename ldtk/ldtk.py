@@ -18,6 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 from functools import partial
+from pathlib import Path
+from typing import Optional, Union
 
 from numpy import argmin
 from numba import njit
@@ -257,7 +259,7 @@ class LDPSet(object):
                 chain = zeros([n_mc_samples,npar])
 
                 chain[0,:] = qc
-                logl[0]    = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
+                logl[0] = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
 
                 for i in range(1,n_mc_samples):
                     pos_t  = multivariate_normal(chain[i-1], diag(s**2))
@@ -285,6 +287,8 @@ class LDPSet(object):
         return array(qcs), array(covs)
 
     def _lnlike(self, ldcs, joint=True, flt=None, ldmodel=QuadraticModel):
+        ldcs = asarray(ldcs)
+
         if not joint:
             raise DeprecationWarning(
                 "The argument 'joint' has been deprecated since LDTk 1.1 and will be removed in the future.")
@@ -347,16 +351,21 @@ class LDPSetCreator(object):
 
     cache : str, optional
         Path to the cache directory.
+
+    photon_counting: bool, optional
+        If true, calculate photon-weighted averages (e.g., for a CCD), otherwise calculate energy-weighted averages.
+
     """
     def __init__(self, teff, logg, z, filters,
-                 qe=None, limits=None, offline_mode=False,
-                 force_download=False, verbose=False, cache=None):
+                 qe=None, limits=None, offline_mode: bool = False,
+                 force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
+                 photon_counting: bool = True):
 
         self.teff  = teff
         self.logg  = logg
         self.metal = z
 
-        def set_lims(ms_or_samples, pts, plims=[0.135,100-0.135] ):
+        def set_lims(ms_or_samples, pts, plims=(0.135, 100-0.135) ):
             if len(ms_or_samples) > 2:
                 return a_lims_hilo(pts, *percentile(ms_or_samples, plims))
             else:
@@ -386,8 +395,8 @@ class LDPSetCreator(object):
         if with_mpi:
             comm.Barrier()
 
-        ## Initialize the basic arrays
-        ## ---------------------------
+        # Initialize the basic arrays
+        # ---------------------------
         with pf.open(self.files[0]) as hdul:
             wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
             dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
@@ -397,17 +406,21 @@ class LDPSetCreator(object):
             self.z    = sqrt(1-self.mu**2)
             self.nmu  = self.mu.size
 
-        ## Read in the fluxes
-        ## ------------------
-        self.fluxes   = zeros([self.nfilters, self.nfiles, self.nmu])
+        # Read in the fluxes
+        # ------------------
+        self.fluxes = zeros([self.nfilters, self.nfiles, self.nmu])
         for fid,f in enumerate(self.filters):
-            w = f(wl) * self.qe(wl)
-            for did,df in enumerate(self.files):
-                self.fluxes[fid,did,:]  = (pf.getdata(df)*w).mean(1)
-                self.fluxes[fid,did,:] /= self.fluxes[fid,did,-1]
+            if photon_counting:
+                w = f(wl) * wl * self.qe(wl)
+            else:
+                w = f(wl) * self.qe(wl)
 
-        ## Create n_filter interpolators
-        ## -----------------------------
+            for did, df in enumerate(self.files):
+                self.fluxes[fid, did, :] = (pf.getdata(df)*w).mean(1)
+                self.fluxes[fid, did, :] /= self.fluxes[fid,did,-1]
+
+        # Create n_filter interpolators
+        # -----------------------------
         points = array([[f.teff,f.logg,f.z] for f in self.client.files])
         self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
 
