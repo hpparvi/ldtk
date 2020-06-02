@@ -18,7 +18,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import numpy as np
-from numpy import asarray, sqrt, log2
+
+from numba import njit
+from numpy import ndarray, asarray, sqrt, log2, atleast_2d, zeros
+
+from .models import m_quadratic, m_triangular
+
+@njit
+def _get_dims(mu, pv):
+    if pv.ndim == 1:
+        npv, npb = 1, 1
+    elif pv.ndim == 2:
+        npv, npb = 1, pv.shape[0]
+    else:
+        npv, npb = pv.shape[0], pv.shape[1]
+    return npv, npb, npv*npb, mu.size
 
 
 class LDModel(object):
@@ -33,7 +47,7 @@ class LDModel(object):
         raise NotImplementedError
 
     @classmethod
-    def eval(cl, mu, pv):
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
         raise NotImplementedError
 
 
@@ -44,8 +58,8 @@ class LinearModel(LDModel):
     abbr = 'ln'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        assert len(pv) == cls.npar
         mu = asarray(mu)
         return 1. - pv[0]*(1.-mu)
 
@@ -57,10 +71,8 @@ class QuadraticModel(LDModel):
     abbr = 'qd'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
-        mu = asarray(mu)
-        return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu)**2
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        return m_quadratic(mu, pv)
 
 
 class TriangularQuadraticModel(LDModel):
@@ -70,12 +82,8 @@ class TriangularQuadraticModel(LDModel):
     abbr = 'tq'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
-        mu = asarray(mu)
-        a, b = sqrt(pv[0]), 2*pv[1]
-        u, v = a*b, a*(1. - b)
-        return 1. - u*(1.-mu) - v*(1.-mu)**2
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        return m_triangular(mu, pv)
 
 
 class SquareRootModel(LDModel):
@@ -85,11 +93,23 @@ class SquareRootModel(LDModel):
     abbr = 'sq'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        assert len(pv) == cls.npar
         mu = asarray(mu)
         return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu**0.5)
 
+
+# Nonlinear model
+# ---------------
+@njit(fastmath=True)
+def _evaluate_nl(mu, coeffs):
+    npv, npb, ncf, npt = _get_dims(mu, coeffs)
+    cf = coeffs.reshape((ncf, 4))
+    fl = zeros((ncf, npt))
+    for i in range(ncf):
+        fl[i, :] = (1. - (cf[i, 0] * (1. - mu**0.5) + cf[i, 1] * (1. - mu) +
+                          cf[i, 2] * (1. - mu**1.5) + cf[i, 3] * (1. - mu**2)))
+    return fl.reshape((npv, npb, npt))
 
 class NonlinearModel(LDModel):
     """Nonlinear limb darkening model (Claret, 2000)."""
@@ -98,11 +118,9 @@ class NonlinearModel(LDModel):
     abbr = 'nl'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
-        mu = asarray(mu)
-        return (1. - (pv[0]*(1.-mu**0.5) + pv[1]*(1.-mu) +
-                      pv[2]*(1.-mu**1.5) + pv[3]*(1.-mu**2  )))
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        assert len(pv) == cls.npar
+        return _evaluate_nl(mu, pv).squeeze()
 
 
 class GeneralModel(LDModel):
@@ -112,9 +130,22 @@ class GeneralModel(LDModel):
     abbr = 'ge'
 
     @classmethod
-    def evaluate(cl, mu, pv):
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
         mu = asarray(mu)
         return 1. - np.sum([c*(1.-mu**(i+1)) for i,c in enumerate(pv)], 0)
+
+
+# Power2 model
+# ------------
+@njit(fastmath=True)
+def _evaluate_p2(mu, coeffs):
+    npv, npb, ncf, npt = _get_dims(mu, coeffs)
+    cf = coeffs.reshape((ncf, 2))
+    fl = zeros((ncf, npt))
+    for i in range(ncf):
+        fl[i, :] = 1. - cf[i,0]*(1.-(mu**cf[i,1]))
+    return fl.reshape((npv, npb, npt))
+
 
 class Power2Model(LDModel):
     """Power-2 limb darkening model (Morello et al, 2017)."""
@@ -123,10 +154,23 @@ class Power2Model(LDModel):
     abbr = 'p2'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
-        mu = asarray(mu)
-        return 1. - pv[0]*(1.-(mu**pv[1]))
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        return _evaluate_p2(mu, pv).squeeze()
+
+
+# Power2 model, alternative parametrisation
+# -----------------------------------------
+@njit(fastmath=True)
+def _evaluate_p2mp(mu, coeffs):
+    npv, npb, ncf, npt = _get_dims(mu, coeffs)
+    cf = coeffs.reshape((ncf, 2))
+    fl = zeros((ncf, npt))
+    for i in range(ncf):
+        c = 1. - cf[i, 0] + cf[i, 1]
+        a = log2(c / cf[i, 1])
+        fl[i, :] = 1. - c * (1. - mu**a)
+    return fl.reshape((npv, npb, npt))
+
 
 class Power2MPModel(LDModel):
     """Power-2 limb darkening model with an alternative parametrisation (Maxted, P.F.L., 2018)."""
@@ -135,12 +179,8 @@ class Power2MPModel(LDModel):
     abbr = 'p2mp'
 
     @classmethod
-    def evaluate(cl, mu, pv):
-        assert len(pv) == cl.npar
-        mu = asarray(mu)
-        c = 1 - pv[0] + pv[1]
-        a = log2(c/pv[1])
-        return 1. - c*(1.-(mu**a))
+    def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
+        return _evaluate_p2mp(mu, pv).squeeze()
 
 
 models = {'linear':    LinearModel,

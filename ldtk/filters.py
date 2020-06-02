@@ -23,6 +23,7 @@ from pathlib import Path
 from numpy import array, argsort, zeros_like, arange, loadtxt, linspace
 from scipy.interpolate import interp1d
 
+
 class Filter(object):
     def __init__(self, name):
         self.name = name
@@ -99,6 +100,7 @@ sdss_g = BoxcarFilter("g'", 400, 550)
 sdss_r = BoxcarFilter("r'", 570, 690)
 sdss_i = BoxcarFilter("i'", 710, 790)
 sdss_z = BoxcarFilter("z'", 810, 900)
+
 kepler = TabulatedFilter('kepler',
                          arange(350, 960, 25),
                          array([0.000, 0.001, 0.000, 0.056, 0.465, 0.536, 0.624, 0.663,

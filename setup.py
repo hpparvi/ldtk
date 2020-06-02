@@ -1,14 +1,18 @@
 from setuptools import setup, find_packages
 
+version = {}
+with open("ldtk/version.py") as fp:
+    exec(fp.read(), version)
+
 setup(name='LDTk',
-      version='1.0',
+      version=version['__version__'],
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       author='Hannu Parviainen',
       author_email='hpparvi@gmail.com',
       url='https://github.com/hpparvi/ldtk',
       packages=find_packages(),
-      install_requires=["numpy", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
+      install_requires=["numpy", "numba", "scipy>=0.16", "astropy", "tqdm", "traitlets"],
       include_package_data=True,
       package_data={'ldtk': ['filter_files/*','filter_files/gtc/osiris/*']},
       license='GPLv2',
@@ -19,7 +23,6 @@ setup(name='LDTk',
           "Development Status :: 5 - Production/Stable",
           "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
           "Operating System :: OS Independent",
-          "Programming Language :: Python :: 2.7",
           "Programming Language :: Python :: 3"
       ],
       keywords= 'astronomy astrophysics exoplanets'
