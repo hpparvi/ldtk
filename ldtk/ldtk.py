@@ -286,12 +286,12 @@ class LDPSet(object):
 
         return array(qcs), array(covs)
 
-    def _lnlike(self, ldcs, joint=True, flt=None, ldmodel=QuadraticModel):
+    def _lnlike(self, ldcs, joint=None, flt=None, ldmodel=QuadraticModel):
         ldcs = asarray(ldcs)
 
-        if not joint:
+        if joint is not None:
             raise DeprecationWarning(
-                "The argument 'joint' has been deprecated since LDTk 1.1 and will be removed in the future.")
+                "The argument 'joint' has been deprecated in LDTk 1.1 and will be removed in the future.")
         if (ldcs.ndim == 1) and (flt is None) and (self._nfilters > 1):
             raise ValueError(
                 'Need to give the filter id `flt` if evaluating a single set of coefficients with multiple filters defined.')
