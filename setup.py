@@ -1,7 +1,11 @@
 from setuptools import setup, find_packages
 
+version = {}
+with open("ldtk/version.py") as fp:
+    exec(fp.read(), version)
+
 setup(name='LDTk',
-      version='1.0',
+      version=version['__version__'],
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       author='Hannu Parviainen',
@@ -18,7 +22,6 @@ setup(name='LDTk',
           "Development Status :: 5 - Production/Stable",
           "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
           "Operating System :: OS Independent",
-          "Programming Language :: Python :: 2.7",
           "Programming Language :: Python :: 3"
       ],
       keywords= 'astronomy astrophysics exoplanets'
