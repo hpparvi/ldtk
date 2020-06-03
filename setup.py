@@ -5,7 +5,7 @@ with open("ldtk/version.py") as fp:
     exec(fp.read(), version)
 
 setup(name='LDTk',
-      version=version['__version__'],
+      version=str(version['__version__']),
       description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       long_description='Toolkit to calculate stellar limb darkening profiles for arbitrary filters.',
       author='Hannu Parviainen',
