@@ -20,16 +20,36 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from ftplib import FTP
 from itertools import product
 from .core import *
-    
+
+edir_medres = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+edir_lowres = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+
 class Client(object):
-    def __init__(self, limits=None, verbosity=1, offline_mode=False, update_server_file_list=False, cache=None):
+    def __init__(self, limits=None, verbosity: int = 1, offline_mode: bool = False,
+                 update_server_file_list: bool = False, cache: str = None, lowres: bool = True):
+        """LDTk client
+
+        Args:
+            limits: Teff, log g, and metallicity limits.
+            verbosity: verbosity level.
+            offline_mode: tries to use cached files only if set to ``True``.
+            update_server_file_list: updates the server file list if set to ``True``.
+            cache: path to the cache directory where the downloaded files should be stored.
+            lowres: uses spectra binned to 5 nm if set to ``True``, otherwise uses the original files.
+        """
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
-        self.edir = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+        self.use_lowres = lowres
         self.files = None
         self.verbosity = verbosity
         self.offline_mode = offline_mode
 
-        self._cache = cache or join(ldtk_root,'cache')
+        if lowres:
+            self.edir = edir_lowres
+            self._cache = cache or join(ldtk_root,'cache_lowres')
+        else:
+            self.edir = edir_medres
+            self._cache = cache or join(ldtk_root,'cache')
+
         self._server_file_list = join(ldtk_root, 'server_file_list.pkl')
 
         if not exists(self._cache):
@@ -78,8 +98,9 @@ class Client(object):
         self.clean_file_list()
 
         self.not_cached =  len(self.files) - sum([f.local_exists for f in self.files])
+        fsize = 0.334 if self.use_lowres else 16
         if self.not_cached > 0:
-            message("Need to download {:d} files, approximately {} MB".format(self.not_cached, 16*self.not_cached))
+            message("Need to download {:d} files, approximately {:.2f} MB".format(self.not_cached, fsize*self.not_cached))
     
 
     def get_server_file_list(self):

@@ -50,6 +50,15 @@ spectroscopy where the modeling is carried out for custom narrow passbands. The 
 
 The second approach can be used to constrain the LD model parameter space directly by the LD profile, allowing for the marginalization over the whole parameter space that can explain the profile without the need to approximate this constraint by a prior distribution. This is useful when using a high-order limb darkening model where the coefficients are often correlated, and the priors estimated from the tabulated values usually fail to include these correlations.
 
+## News
+- Version 1.2
+
+    - Added an option to use *low resolution* version of the original specific intensity spectra. These spectra are binned to 
+      5 nm resolution in wavelength and are kindly hosted by T. Husser at the same FTP server as the original spectra.
+    - The behavior can be toggled with a new ``LDPSetCreator`` initialisation argument, ``lowres``.
+    - **LDTk uses now low resolution spectra by default**. This is because the wavelength resolution should be good enough 
+      for most broadband photometry analyses, and the this decreases the download times and file storage sizes significantly.
+
 ## Requirements
 ### Core requirements
 - Python 2.7 or Python 3

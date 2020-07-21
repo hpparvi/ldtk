@@ -19,7 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from functools import partial
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from numpy import argmin
 from numba import njit
@@ -355,15 +355,20 @@ class LDPSetCreator(object):
     photon_counting: bool, optional
         If true, calculate photon-weighted averages (e.g., for a CCD), otherwise calculate energy-weighted averages.
 
+    lowres: bool, optional
+        If true, use model spectra binned to 5 nm, otherwise use the original files.
+
     """
-    def __init__(self, teff, logg, z, filters,
+    def __init__(self, teff, logg, z, filters: List,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True):
+                 photon_counting: bool = True, lowres: bool = True):
 
         self.teff  = teff
         self.logg  = logg
         self.metal = z
+
+        self.use_lowres = lowres
 
         def set_lims(ms_or_samples, pts, plims=(0.135, 100-0.135) ):
             if len(ms_or_samples) > 2:
@@ -383,7 +388,7 @@ class LDPSetCreator(object):
             print("logg limits: " + str(logg_lims))
             print("Fe/H limits: " + str(metal_lims))
 
-        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache)
+        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
         self.files    = self.client.local_filenames
         self.filters  = filters
         self.nfiles   = len(self.files)
