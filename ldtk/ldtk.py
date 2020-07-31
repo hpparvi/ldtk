@@ -31,15 +31,17 @@ from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, Squ
                       GeneralModel, Power2Model, Power2MPModel, models)
 from .client import Client
 from .core import *
-from .models import m_quadratic
+
 
 def load_ldpset(filename):
     with open(filename, 'rb') as fin:
         return LDPSet(load(fin), load(fin), load(fin))
 
+
 @njit
 def lnlike1d(model, fid, _lnc1, _lnc2, _mean, _err2):
     return _lnc1 + _lnc2[fid] -0.5*((_mean[fid]-model)**2/_err2[fid]).sum()
+
 
 @njit
 def lnlike2d(model, _lnc1, _lnc2, _mean, _err2):
@@ -61,6 +63,7 @@ def lnlike3d(model, _lnc1, _lnc2, _mean, _err2):
             lnl[ipv] += _lnc1 + _lnc2[fid] - 0.5 * ((_mean[fid] - model[ipv, fid]) ** 2 / _err2[fid]).sum()
     return lnl
 
+
 # Main classes
 # ============
 class LDPSet(object):
@@ -77,7 +80,6 @@ class LDPSet(object):
 
     """
 
-    models = {'quadratic': m_quadratic}
 
     def __init__(self, filters, mu, ldp_samples):
         self._filters  = filters

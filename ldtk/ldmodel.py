@@ -17,24 +17,91 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-import numpy as np
-
 from numba import njit
-from numpy import ndarray, asarray, sqrt, log2, atleast_2d, zeros
+from numpy import ndarray, sqrt, zeros, power, exp, log
 
-from .models import m_quadratic, m_triangular
+
+# Model implementations
+# =====================
+# shape = [ipv, ipb, icf]
 
 @njit
-def _get_dims(mu, pv):
-    if pv.ndim == 1:
-        npv, npb = 1, 1
-    elif pv.ndim == 2:
-        npv, npb = 1, pv.shape[0]
+def evaluate_ld(ldm, mu, pvo):
+    if pvo.ndim == 1:
+        pv = pvo.reshape((1, 1, -1))
+    elif pvo.ndim == 2:
+        pv = pvo.reshape((1, pvo.shape[0], pvo.shape[1]))
     else:
-        npv, npb = pv.shape[0], pv.shape[1]
-    return npv, npb, npv*npb, mu.size
+        pv = pvo
+
+    npv = pv.shape[0]
+    npb = pv.shape[1]
+    ldp = zeros((npv, npb, mu.size))
+    for ipv in range(npv):
+        for ipb in range(npb):
+            ldp[ipv, ipb, :] = ldm(mu, pv[ipv, ipb])
+    return ldp
 
 
+@njit(fastmath=True)
+def ld_linear(mu, pv):
+    return 1. - pv[0] * (1. - mu)
+
+
+@njit(fastmath=True)
+def ld_quadratic(mu, pv):
+    return 1. - pv[0] * (1. - mu) - pv[1] * (1. - mu) ** 2
+
+
+@njit(fastmath=True)
+def ld_quadratic_tri(mu, pv):
+    a, b = sqrt(pv[0]), 2 * pv[1]
+    u, v = a * b, a * (1. - b)
+    return 1. - u * (1. - mu) - v * (1. - mu) ** 2
+
+
+@njit(fastmath=True)
+def ld_nonlinear(mu, pv):
+    return 1. - pv[0] * (1. - sqrt(mu)) - pv[1] * (1. - mu) - pv[2] * (1. - power(mu, 1.5)) - pv[3] * (1. - mu ** 2)
+
+
+@njit(fastmath=True)
+def ld_general(mu, pv):
+    ldp = zeros(mu.size)
+    for i in range(pv.size):
+        ldp += pv[i] * (1.0 - mu ** (i + 1))
+    return ldp
+
+
+@njit(fastmath=True)
+def ld_square_root(mu, pv):
+    return 1. - pv[0] * (1. - mu) - pv[1] * (1. - sqrt(mu))
+
+
+@njit(fastmath=True)
+def ld_logarithmic(mu, pv):
+    return 1. - pv[0] * (1. - mu) - pv[1] * mu * log(mu)
+
+
+@njit(fastmath=True)
+def ld_exponential(mu, pv):
+    return 1. - pv[0] * (1. - mu) - pv[1] / (1. - exp(mu))
+
+
+@njit(fastmath=True)
+def ld_power_2(mu, pv):
+    return 1. - pv[0] * (1. - mu ** pv[1])
+
+
+@njit(fastmath=True)
+def ld_power_2_pm(mu, pv):
+    c = 1 - pv[0] + pv[1]
+    a = log(c/pv[1])
+    return 1. - c * (1. - mu**a)
+
+
+# Model Classes
+# =============
 class LDModel(object):
     npar = None
     name = None
@@ -59,9 +126,7 @@ class LinearModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        assert len(pv) == cls.npar
-        mu = asarray(mu)
-        return 1. - pv[0]*(1.-mu)
+        return evaluate_ld(ld_linear, mu, pv)
 
 
 class QuadraticModel(LDModel):
@@ -72,7 +137,7 @@ class QuadraticModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        return m_quadratic(mu, pv)
+        return evaluate_ld(ld_quadratic, mu, pv)
 
 
 class TriangularQuadraticModel(LDModel):
@@ -83,7 +148,7 @@ class TriangularQuadraticModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        return m_triangular(mu, pv)
+        return evaluate_ld(ld_quadratic_tri, mu, pv)
 
 
 class SquareRootModel(LDModel):
@@ -94,22 +159,8 @@ class SquareRootModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        assert len(pv) == cls.npar
-        mu = asarray(mu)
-        return 1. - pv[0]*(1.-mu) - pv[1]*(1.-mu**0.5)
+        return evaluate_ld(ld_square_root, mu, pv)
 
-
-# Nonlinear model
-# ---------------
-@njit(fastmath=True)
-def _evaluate_nl(mu, coeffs):
-    npv, npb, ncf, npt = _get_dims(mu, coeffs)
-    cf = coeffs.reshape((ncf, 4))
-    fl = zeros((ncf, npt))
-    for i in range(ncf):
-        fl[i, :] = (1. - (cf[i, 0] * (1. - mu**0.5) + cf[i, 1] * (1. - mu) +
-                          cf[i, 2] * (1. - mu**1.5) + cf[i, 3] * (1. - mu**2)))
-    return fl.reshape((npv, npb, npt))
 
 class NonlinearModel(LDModel):
     """Nonlinear limb darkening model (Claret, 2000)."""
@@ -119,8 +170,7 @@ class NonlinearModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        assert len(pv) == cls.npar
-        return _evaluate_nl(mu, pv).squeeze()
+        return evaluate_ld(ld_nonlinear, mu, pv)
 
 
 class GeneralModel(LDModel):
@@ -131,20 +181,7 @@ class GeneralModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        mu = asarray(mu)
-        return 1. - np.sum([c*(1.-mu**(i+1)) for i,c in enumerate(pv)], 0)
-
-
-# Power2 model
-# ------------
-@njit(fastmath=True)
-def _evaluate_p2(mu, coeffs):
-    npv, npb, ncf, npt = _get_dims(mu, coeffs)
-    cf = coeffs.reshape((ncf, 2))
-    fl = zeros((ncf, npt))
-    for i in range(ncf):
-        fl[i, :] = 1. - cf[i,0]*(1.-(mu**cf[i,1]))
-    return fl.reshape((npv, npb, npt))
+        return evaluate_ld(ld_general, mu, pv)
 
 
 class Power2Model(LDModel):
@@ -155,21 +192,7 @@ class Power2Model(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        return _evaluate_p2(mu, pv).squeeze()
-
-
-# Power2 model, alternative parametrisation
-# -----------------------------------------
-@njit(fastmath=True)
-def _evaluate_p2mp(mu, coeffs):
-    npv, npb, ncf, npt = _get_dims(mu, coeffs)
-    cf = coeffs.reshape((ncf, 2))
-    fl = zeros((ncf, npt))
-    for i in range(ncf):
-        c = 1. - cf[i, 0] + cf[i, 1]
-        a = log2(c / cf[i, 1])
-        fl[i, :] = 1. - c * (1. - mu**a)
-    return fl.reshape((npv, npb, npt))
+        return evaluate_ld(ld_power_2, mu, pv)
 
 
 class Power2MPModel(LDModel):
@@ -180,7 +203,7 @@ class Power2MPModel(LDModel):
 
     @classmethod
     def evaluate(cls, mu: ndarray, pv: ndarray) -> ndarray:
-        return _evaluate_p2mp(mu, pv).squeeze()
+        return evaluate_ld(ld_power_2_pm, mu, pv)
 
 
 models = {'linear':    LinearModel,
@@ -191,4 +214,3 @@ models = {'linear':    LinearModel,
           'general':   GeneralModel,
           'power2':    Power2Model,
           'power2mp': Power2MPModel}
-

@@ -19,4 +19,4 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from semantic_version import Version
 
-__version__ = Version('1.2.0')
+__version__ = Version('1.3.0')
