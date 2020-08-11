@@ -156,7 +156,8 @@ class Client(object):
                         if self.verbosity > 1:
                             print('Skipping an existing file: {:s}'.format(f.name))
             ftp.close()
-            return file_paths
+            return self.check_file_corruption(file_paths)
+        return False
 
 
     def check_file_corruption(self, files):

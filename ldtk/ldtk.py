@@ -400,8 +400,7 @@ class LDPSetCreator(object):
 
         @retry(stop=stop_after_attempt(3), wait=wait_fixed(15), retry=retry_if_exception_type(Exception))
         def download_files():
-            new_files = self.client.download_uncached_files(force=force_download)
-            if self.client.check_file_corruption(new_files):
+            if self.client.download_uncached_files(force=force_download):
                 self.client.__init__(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
                 raise Exception
 
