@@ -22,8 +22,6 @@ from itertools import product
 from .core import *
 from astropy.utils.exceptions import AstropyWarning
 
-warnings.simplefilter('error', category=AstropyWarning)
-
 edir_medres = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 edir_lowres = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 
@@ -163,20 +161,22 @@ class Client(object):
     def check_file_corruption(self, files):
         """Checks local cache for corrupted files."""
 
-        corrupt = False
-        for file in files:
-            if file.endswith('.fits'):
-                hdul = None
-                try:
-                    hdul = pf.open(file, checksum=True)
-                except AstropyWarning:
-                    corrupt = True
-                    os.remove(file)
-                finally:
-                    if getattr(hdul, "close", None) and callable(hdul.close):
-                        hdul.close()
-                    del hdul
-        return corrupt
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', category=AstropyWarning)
+            corrupt = False
+            for file in files:
+                if file.endswith('.fits'):
+                    hdul = None
+                    try:
+                        hdul = pf.open(file, checksum=True)
+                    except AstropyWarning:
+                        corrupt = True
+                        os.remove(file)
+                    finally:
+                        if getattr(hdul, "close", None) and callable(hdul.close):
+                            hdul.close()
+                        del hdul
+            return corrupt
 
 
     @property
