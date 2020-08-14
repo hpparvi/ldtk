@@ -27,7 +27,7 @@ from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete, append,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
-from tqdm import tqdm, tqdm_notebook
+from tqdm.auto import tqdm
 
 warnings.filterwarnings('ignore')
     
