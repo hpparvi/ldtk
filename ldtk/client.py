@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from ftplib import FTP
 from itertools import product
 from .core import *
+from astropy.utils.exceptions import AstropyWarning
 
 edir_medres = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 edir_lowres = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
@@ -71,12 +72,12 @@ class Client(object):
         """Creates the path to the local version of the file."""
         fn = teff_or_fn if isinstance(teff_or_fn, str) else self.create_name(teff_or_fn,logg,z)
         return join(self._cache,'Z'+fn[13:17],fn)
-        
+
 
     def _local_exists(self, teff_or_fn, logg=None, z=None):
         """Tests if a file exists in the local cache. """
         return exists(self._local_path(teff_or_fn, logg, z))
-        
+
 
     def create_name(self, teff, logg, z):
         """Creates a SPECINT filename given teff, logg, and z."""
@@ -101,7 +102,7 @@ class Client(object):
         fsize = 0.334 if self.use_lowres else 16
         if self.not_cached > 0:
             message("Need to download {:d} files, approximately {:.2f} MB".format(self.not_cached, fsize*self.not_cached))
-    
+
 
     def get_server_file_list(self):
         ftp = FTP(self.eftp)
@@ -120,8 +121,8 @@ class Client(object):
     def files_exist(self, files=None):
         """Tests if a file exists in the FTP server."""
         return [f.name in self.files_in_server[f._zstr] for f in self.files]
-            
-    
+
+
     def clean_file_list(self):
         """Removes files not in the FTP server."""
         self.files = [f for f,e in zip(self.files,self.files_exist()) if e]
@@ -134,7 +135,8 @@ class Client(object):
             ftp = FTP(self.eftp)
             ftp.login()
             ftp.cwd(self.edir)
-            
+            file_paths = []
+
             with tqdm(desc='LDTk downloading uncached files', total=self.not_cached) as pb:
                 for fid,f in enumerate(self.files):
                     if not exists(join(self._cache,f._zstr)):
@@ -147,10 +149,34 @@ class Client(object):
                         ftp.cwd('..')
                         self.not_cached -= 1
                         pb.update(1)
+                        file_paths.append(f.local_path)
                     else:
                         if self.verbosity > 1:
                             print('Skipping an existing file: {:s}'.format(f.name))
             ftp.close()
+            return self.check_file_corruption(file_paths)
+        return False
+
+
+    def check_file_corruption(self, files):
+        """Checks local cache for corrupted files."""
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', category=AstropyWarning)
+            corrupt = False
+            for file in files:
+                if file.endswith('.fits'):
+                    hdul = None
+                    try:
+                        hdul = pf.open(file, checksum=True)
+                    except AstropyWarning:
+                        corrupt = True
+                        os.remove(file)
+                    finally:
+                        if getattr(hdul, "close", None) and callable(hdul.close):
+                            hdul.close()
+                        del hdul
+            return corrupt
 
 
     @property

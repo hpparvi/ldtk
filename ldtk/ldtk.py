@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from functools import partial
 from pathlib import Path
+from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 from typing import Optional, Union, List
 
 from numpy import argmin
@@ -390,15 +391,21 @@ class LDPSetCreator(object):
             print("logg limits: " + str(logg_lims))
             print("Fe/H limits: " + str(metal_lims))
 
-        self.client   = c = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
+        self.client   = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
         self.files    = self.client.local_filenames
         self.filters  = filters
         self.nfiles   = len(self.files)
         self.nfilters = len(filters)
         self.qe       = qe or (lambda wl: 1.)
 
+        @retry(stop=stop_after_attempt(3), wait=wait_fixed(15), retry=retry_if_exception_type(Exception))
+        def download_files():
+            if self.client.download_uncached_files(force=force_download):
+                self.client.__init__(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
+                raise Exception
+
         if is_root and not offline_mode:
-            self.client.download_uncached_files(force=force_download)
+            download_files()
         if with_mpi:
             comm.Barrier()
 
