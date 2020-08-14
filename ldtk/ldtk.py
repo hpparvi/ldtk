@@ -364,7 +364,7 @@ class LDPSetCreator(object):
     def __init__(self, teff, logg, z, filters: List,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True, lowres: bool = False):
+                 photon_counting: bool = True, lowres: bool = True):
 
         self.teff  = teff
         self.logg  = logg
