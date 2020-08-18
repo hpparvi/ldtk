@@ -38,6 +38,7 @@ try:
     mpi_size = comm.Get_size()
     with_mpi = True
 except ImportError:
+    comm = None
     mpi_rank = 0
     mpi_size = 1
     with_mpi = False
