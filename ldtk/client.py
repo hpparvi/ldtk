@@ -175,6 +175,7 @@ class Client(object):
                             pass
                     except (AstropyWarning, OSError):
                         corrupt = True
+                        del hdul[0].data
                         os.remove(file)
             return corrupt
 
