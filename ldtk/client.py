@@ -29,17 +29,23 @@ from pickle import dump, load
 from astropy.utils.exceptions import AstropyWarning
 from tqdm.auto import tqdm
 
-from .core import ldtk_root, FN_TEMPLATE, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_inside, SpecIntFile, message
+from .core import ldtk_root, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_inside, SpecIntFile, message
 
 warnings.filterwarnings('ignore')
 
-edir_medres = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
-edir_lowres = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+edir_medres_vis = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+edir_lowres_vis = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
+edir_medres_visir = 'v3.0/SpecIntFITS'
 
+FN_TEMPLATE_VISIR = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-2011-SpecInt.fits'
+FN_TEMPLATE_VIS = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
+
+datasets = 'vis', 'vis_lowres', 'visir'
 
 class Client(object):
     def __init__(self, limits=None, verbosity: int = 1, offline_mode: bool = False,
-                 update_server_file_list: bool = False, cache: str = None, lowres: bool = True):
+                 update_server_file_list: bool = False, cache: str = None, lowres: bool = False,
+                 dataset: str = 'vis_lowres'):
         """LDTk client
 
         Args:
@@ -48,7 +54,8 @@ class Client(object):
             offline_mode: tries to use cached files only if set to ``True``.
             update_server_file_list: updates the server file list if set to ``True``.
             cache: path to the cache directory where the downloaded files should be stored.
-            lowres: uses spectra binned to 5 nm if set to ``True``, otherwise uses the original files.
+            dataset: the spectroscopic dataset to use. Can be either 'vis', 'vis_lowres' covering the
+                     visible spectrum, or 'visir' that goes all the way to 5 micron..
         """
         self.eftp = 'phoenix.astro.physik.uni-goettingen.de'
         self.use_lowres = lowres
@@ -57,13 +64,26 @@ class Client(object):
         self.offline_mode = offline_mode
 
         if lowres:
-            self.edir = edir_lowres
-            self._cache = cache or join(ldtk_root, 'cache_lowres')
-        else:
-            self.edir = edir_medres
-            self._cache = cache or join(ldtk_root, 'cache')
+            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis_lowres" instead.')
 
-        self._server_file_list = join(ldtk_root, 'server_file_list.pkl')
+        if dataset not in datasets:
+            raise(ValueError(f'Dataset must be one in {datasets}'))
+
+        if dataset == 'vis':
+            self.edir = edir_medres_vis
+            self.fn_template = FN_TEMPLATE_VIS
+            self.fsize = 15.2
+        elif dataset == 'vis_lowres':
+            self.edir = edir_lowres_vis
+            self.fn_template = FN_TEMPLATE_VIS
+            self.fsize = 0.334
+        elif dataset == 'visir':
+            self.edir = edir_medres_visir
+            self.fn_template = FN_TEMPLATE_VISIR
+            self.fsize = 32.4
+
+        self._cache = cache or join(ldtk_root, f'cache_{dataset}')
+        self._server_file_list = join(ldtk_root, f'server_file_list_{dataset}.pkl')
 
         if not exists(self._cache):
             os.mkdir(self._cache)
@@ -90,7 +110,7 @@ class Client(object):
 
     def create_name(self, teff, logg, z):
         """Creates a SPECINT filename given teff, logg, and z."""
-        return FN_TEMPLATE.format(teff=int(teff), logg=logg, z=z)
+        return self.fn_template.format(teff=int(teff), logg=logg, z=z)
 
     def set_limits(self, teff_lims, logg_lims, z_lims):
         self.teffl = teff_lims
@@ -103,14 +123,13 @@ class Client(object):
         self.zs = is_inside(Z_POINTS, z_lims)
         self.nz = len(self.zs)
         self.pars = [p for p in product(self.teffs, self.loggs, self.zs)]
-        self.files = [SpecIntFile(*p, cache=self._cache) for p in product(self.teffs, self.loggs, self.zs)]
+        self.files = [SpecIntFile(*p, cache=self._cache, fn_template=self.fn_template) for p in product(self.teffs, self.loggs, self.zs)]
         self.clean_file_list()
         self.check_file_corruption([f.local_path for f in self.files])
 
         self.not_cached = len(self.files) - sum([f.local_exists for f in self.files])
-        fsize = 0.334 if self.use_lowres else 16
         if self.not_cached > 0:
-            message("Need to download {:d} files, approximately {:.2f} MB".format(self.not_cached, fsize * self.not_cached))
+            message("Need to download {:d} files, approximately {:.2f} MB".format(self.not_cached, self.fsize * self.not_cached))
 
     def get_server_file_list(self):
         ftp = FTP(self.eftp)
@@ -118,6 +137,7 @@ class Client(object):
         ftp.cwd(self.edir)
         files_in_server = {}
         zdirs = sorted(ftp.nlst())
+        zdirs = [zd for zd in zdirs if '.txt' not in zd.lower()]
         for zdir in tqdm(zdirs, desc='Updating server file list'):
             ftp.cwd(zdir)
             files_in_server[zdir] = sorted(ftp.nlst())

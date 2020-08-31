@@ -354,13 +354,14 @@ class LDPSetCreator(object):
     def __init__(self, teff, logg, z, filters: List,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True, lowres: bool = True):
+                 photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis_lowres'):
 
         self.teff = teff
         self.logg = logg
         self.metal = z
 
-        self.use_lowres = lowres
+        if lowres:
+            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis_lowres" instead.')
 
         def set_lims(ms_or_samples, pts, plims=(0.135, 100 - 0.135)):
             if len(ms_or_samples) > 2:
@@ -380,7 +381,7 @@ class LDPSetCreator(object):
             print("logg limits: " + str(logg_lims))
             print("Fe/H limits: " + str(metal_lims))
 
-        self.client = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
+        self.client = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres, dataset=dataset)
         self.files = self.client.local_filenames
         self.filters = filters
         self.nfiles = len(self.files)

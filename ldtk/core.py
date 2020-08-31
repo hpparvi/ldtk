@@ -58,7 +58,9 @@ TEFF_POINTS = append(arange(2300,7001,100), arange(7200,12001,200)) # The databa
 TEFF_POINTS = delete(TEFF_POINTS, TEFF_POINTS.searchsorted(5000))   # The 5000 K data are missing from the database
 LOGG_POINTS = arange(0,6.1,0.5)
 Z_POINTS    = array([-4.0, -3.0, -2.0, -1.5, -1.0, -0.0, 0.5, 1.0])
-FN_TEMPLATE = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
+
+FN_TEMPLATE_VISIR = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-2011-SpecInt.fits'
+FN_TEMPLATE_VIS = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
 
 ## Utility functions
 ## =================
@@ -101,11 +103,11 @@ def a_lims_hilo(a,lo,hi):
 ## Utility classes
 ## ===============
 class SpecIntFile(object):
-    def __init__(self, teff, logg, z, cache):
+    def __init__(self, teff, logg, z, cache, fn_template):
         self.teff = int(teff)
         self.logg = logg
         self.z    = z
-        self.name  = FN_TEMPLATE.format(teff=self.teff, logg=self.logg, z=self.z)
+        self.name  = fn_template.format(teff=self.teff, logg=self.logg, z=self.z)
         self._zstr = 'Z'+self.name[13:17]
         self.cache = cache
         
