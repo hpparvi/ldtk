@@ -51,6 +51,15 @@ spectroscopy where the modeling is carried out for custom narrow passbands. The 
 The second approach can be used to constrain the LD model parameter space directly by the LD profile, allowing for the marginalization over the whole parameter space that can explain the profile without the need to approximate this constraint by a prior distribution. This is useful when using a high-order limb darkening model where the coefficients are often correlated, and the priors estimated from the tabulated values usually fail to include these correlations.
 
 ## News
+
+- Version 1.4
+
+    - Added automatic detection and re-download of corrupted fits files (a highly welcome contribution by T. Fatahi).
+
+- Version 1.3
+
+    - Changed to calculate the limb darkening models using numba. This should give a significant performance boost.
+
 - Version 1.2
 
     - Added an option to use *low resolution* version of the original specific intensity spectra. These spectra are binned to 

@@ -27,7 +27,7 @@ from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete, append,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
-from tqdm import tqdm, tqdm_notebook
+from tqdm.auto import tqdm
 
 warnings.filterwarnings('ignore')
     
@@ -38,6 +38,7 @@ try:
     mpi_size = comm.Get_size()
     with_mpi = True
 except ImportError:
+    comm = None
     mpi_rank = 0
     mpi_size = 1
     with_mpi = False
@@ -125,11 +126,13 @@ class SIS(object):
             self.wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
             self.dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
             self.nwl  = hdul[0].header['naxis1']        # Number of samples
-            self.data = hdul[0].data
-            self.mu   = hdul[1].data
+            self.data = hdul[0].data.copy()
+            self.mu   = hdul[1].data.copy()
             self.z    = sqrt(1-self.mu**2)
             self.wl   = self.wl0 + arange(self.nwl)*self.dwl
-                
+        del hdul[0].data
+        del hdul[1].data
+
     def intensity_profile(self, l0=0, l1=1e5):
         ip = self.data[:,(self.wl>l0)&(self.wl<l1)].mean(1)
         return ip/ip[-1]
@@ -148,3 +151,6 @@ class IntegratedIP(object):
             self.flux /= self.flux[-1]
             self.mu   = hdul[1].data
             self.z    = sqrt(1-self.mu**2)
+
+        del hdul[0].data
+        del hdul[1].data
