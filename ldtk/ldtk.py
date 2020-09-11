@@ -19,19 +19,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from functools import partial
 from pathlib import Path
-from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
+from pickle import load, dump
 from typing import Optional, Union, List
 
-from numpy import argmin
+import astropy.io.fits as pf
 from numba import njit
-from scipy.interpolate import LinearNDInterpolator as NDI
-from scipy.interpolate import interp1d
+from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, clip
+from numpy.random import normal, multivariate_normal, uniform
+from scipy.interpolate import interp1d, LinearNDInterpolator as NDI
 from scipy.optimize import fmin
+from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
+from .client import Client
+from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
                       GeneralModel, Power2Model, Power2MPModel, models)
-from .client import Client
-from .core import *
 
 
 def load_ldpset(filename):
@@ -41,7 +43,7 @@ def load_ldpset(filename):
 
 @njit
 def lnlike1d(model, fid, _lnc1, _lnc2, _mean, _err2):
-    return _lnc1 + _lnc2[fid] -0.5*((_mean[fid]-model)**2/_err2[fid]).sum()
+    return _lnc1 + _lnc2[fid] - 0.5 * ((_mean[fid] - model) ** 2 / _err2[fid]).sum()
 
 
 @njit
@@ -81,29 +83,28 @@ class LDPSet(object):
 
     """
 
-
     def __init__(self, filters, mu, ldp_samples):
-        self._filters  = filters
+        self._filters = filters
         self._nfilters = len(filters)
-        self._mu       = mu
-        self._z        = sqrt(1-mu**2)
-        self._ldps     = ldp_samples
-        self._mean     = array([ldp_samples[i,:,:].mean(0) for i in range(self._nfilters)])
-        self._std      = array([ldp_samples[i,:,:].std(0)  for i in range(self._nfilters)])
-        self._samples  = {m.abbr:[] for m in models.values()}
+        self._mu = mu
+        self._z = sqrt(1 - mu ** 2)
+        self._ldps = ldp_samples
+        self._mean = array([ldp_samples[i, :, :].mean(0) for i in range(self._nfilters)])
+        self._std = array([ldp_samples[i, :, :].std(0) for i in range(self._nfilters)])
+        self._samples = {m.abbr: [] for m in models.values()}
 
         self._ldps_orig = self._ldps.copy()
-        self._mu_orig   = self._mu.copy()
-        self._z_orig    = self._z.copy()
+        self._mu_orig = self._mu.copy()
+        self._z_orig = self._z.copy()
         self._mean_orig = self._mean.copy()
-        self._std_orig  = self._std.copy()
+        self._std_orig = self._std.copy()
 
-        self._limb_i   = abs(diff(self._mean_orig.mean(0))).argmax()
-        self._limb_z   = self._z_orig[self._limb_i]
-        self._limb_mu  = sqrt(1.-self._z_orig[self._limb_i]**2)
+        self._limb_i = abs(diff(self._mean_orig.mean(0))).argmax()
+        self._limb_z = self._z_orig[self._limb_i]
+        self._limb_mu = sqrt(1. - self._z_orig[self._limb_i] ** 2)
         self.redefine_limb()
 
-        self._lnl     = zeros(self._nfilters)
+        self._lnl = zeros(self._nfilters)
         self.set_uncertainty_multiplier(1.)
         self._update()
 
@@ -115,7 +116,6 @@ class LDPSet(object):
         self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
         self.lnlike_p2 = partial(self._lnlike, ldmodel=Power2Model)
         self.lnlike_p2mp = partial(self._lnlike, ldmodel=Power2MPModel)
-
 
         self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
         self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
@@ -144,7 +144,6 @@ class LDPSet(object):
         self.coeffs_p2.__doc__ = "Estimate the power-2 limb darkening model coefficients, see LPDSet._coeffs for details."
         self.coeffs_p2mp.__doc__ = "Estimate the power-2 MP limb darkening model coefficients, see LPDSet._coeffs for details."
 
-
     def save(self, filename):
         """Saves the LDPSet as a pickle
 
@@ -158,13 +157,11 @@ class LDPSet(object):
             dump(self._mu_orig, f)
             dump(self._ldps_orig, f)
 
-
     def _update(self):
-        self._nmu      = self._mu.size
-        self._lnc1    = -0.5*self._nmu*log(TWO_PI)                           ## 1st ln likelihood term
-        self._lnc2    = array([-log(self._em*e).sum() for e in self._std])   ## 2nd ln likelihood term
-        self._err2    = array([(self._em*e)**2 for e in self._std])          ## variances
-
+        self._nmu = self._mu.size
+        self._lnc1 = -0.5 * self._nmu * log(TWO_PI)  ## 1st ln likelihood term
+        self._lnc2 = array([-log(self._em * e).sum() for e in self._std])  ## 2nd ln likelihood term
+        self._err2 = array([(self._em * e) ** 2 for e in self._std])  ## variances
 
     def set_limb_z(self, z):
         """Set the z value that defines the edge of the stellar disk
@@ -175,60 +172,52 @@ class LDPSet(object):
             The z that defines the edge of the stellar disk
         """
         self._limb_z = z
-        self._limb_i = argmin(abs(self._z_orig-z))
-        self._limb_mu = sqrt(1.-z**2)
+        self._limb_i = argmin(abs(self._z_orig - z))
+        self._limb_mu = sqrt(1. - z ** 2)
         self.reset_sampling()
-
 
     def set_limb_mu(self, mu):
         self._limb_mu = mu
-        self._limb_i  = argmin(abs(self._mu_orig-mu))
-        self._limb_z = sqrt(1.-mu**2)
+        self._limb_i = argmin(abs(self._mu_orig - mu))
+        self._limb_z = sqrt(1. - mu ** 2)
         self.reset_sampling()
 
-
     def redefine_limb(self):
-        self._z  = self._z_orig[self._limb_i:] / self._limb_z
-        self._mu = sqrt(1.-self._z**2)
-        self._ldps = self._ldps_orig[:,:,self._limb_i:].copy()
-        self._mean = self._mean_orig[:,self._limb_i:].copy()
-        self._std  = self._std_orig[:,self._limb_i:].copy()
-
+        self._z = self._z_orig[self._limb_i:] / self._limb_z
+        self._mu = sqrt(1. - self._z ** 2)
+        self._ldps = self._ldps_orig[:, :, self._limb_i:].copy()
+        self._mean = self._mean_orig[:, self._limb_i:].copy()
+        self._std = self._std_orig[:, self._limb_i:].copy()
 
     def set_uncertainty_multiplier(self, em):
-        self._em      = em
+        self._em = em
         self._update()
-
 
     def reset_sampling(self):
         self.redefine_limb()
         self._update()
 
-
     def resample_linear_z(self, nz=100):
-        self.resample(z=linspace(0,1,nz))
-
+        self.resample(z=linspace(0, 1, nz))
 
     def resample_linear_mu(self, nmu=100):
-        self.resample(mu=linspace(0,1,nmu))
-
+        self.resample(mu=linspace(0, 1, nmu))
 
     def resample(self, mu=None, z=None):
         muc = self._mu.copy()
         if z is not None:
-            self._z  = z
-            self._mu = sqrt(1-self._z**2)
+            self._z = z
+            self._mu = sqrt(1 - self._z ** 2)
         elif mu is not None:
             self._mu = mu
-            self._z  = sqrt(1-self._mu**2)
+            self._z = sqrt(1 - self._mu ** 2)
 
         self._mean = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._mean])
-        self._std  = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
+        self._std = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
         self._update()
 
-
     def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
-                ldmodel = QuadraticModel, ngc=4):
+                ldmodel=QuadraticModel, ngc=4):
         """
         Estimate the limb darkening coefficients and their uncertainties for a given limb darkening  model.
 
@@ -248,33 +237,33 @@ class LDPSet(object):
           ldmodel      LDModel  limb darkening model to fit
         """
         npar = ldmodel.npar or ngc
-        qcs  = [fmin(lambda pv:-self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1*ones(npar), disp=0) for iflt in range(self._nfilters)]
+        qcs = [fmin(lambda pv: -self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1 * ones(npar), disp=0) for iflt in range(self._nfilters)]
         covs = []
         for iflt, qc in enumerate(qcs):
             s = zeros(npar)
             for ic in range(npar):
-                s[ic] = (1./sqrt(-dx2(lambda x:self._lnlike(x, flt=iflt, ldmodel=ldmodel), qc, 1e-5, dim=ic)))
+                s[ic] = (1. / sqrt(-dx2(lambda x: self._lnlike(x, flt=iflt, ldmodel=ldmodel), qc, 1e-5, dim=ic)))
 
             ## Simple MCMC uncertainty estimation
             ## ----------------------------------
             if do_mc:
-                logl  = zeros(n_mc_samples)
-                chain = zeros([n_mc_samples,npar])
+                logl = zeros(n_mc_samples)
+                chain = zeros([n_mc_samples, npar])
 
-                chain[0,:] = qc
+                chain[0, :] = qc
                 logl[0] = self._lnlike(chain[0], flt=iflt, ldmodel=ldmodel)
 
-                for i in range(1,n_mc_samples):
-                    pos_t  = multivariate_normal(chain[i-1], diag(s**2))
+                for i in range(1, n_mc_samples):
+                    pos_t = multivariate_normal(chain[i - 1], diag(s ** 2))
                     logl_t = self._lnlike(pos_t, flt=iflt, ldmodel=ldmodel)
-                    if uniform() < exp(logl_t-logl[i-1]):
-                        chain[i,:] = pos_t
-                        logl[i]    = logl_t
+                    if uniform() < exp(logl_t - logl[i - 1]):
+                        chain[i, :] = pos_t
+                        logl[i] = logl_t
                     else:
-                        chain[i,:] = chain[i-1,:]
-                        logl[i]    = logl[i-1]
+                        chain[i, :] = chain[i - 1, :]
+                        logl[i] = logl[i - 1]
                 self._samples[ldmodel.abbr].append(chain)
-                ch = chain[mc_burn::mc_thin,:]
+                ch = chain[mc_burn::mc_thin, :]
 
                 if return_cm:
                     covs.append(cov(ch, rowvar=0))
@@ -283,7 +272,7 @@ class LDPSet(object):
 
             else:
                 if return_cm:
-                    covs.append(s**2 if npar == 1 else diag(s**2))
+                    covs.append(s ** 2 if npar == 1 else diag(s ** 2))
                 else:
                     covs.append(s)
 
@@ -313,7 +302,6 @@ class LDPSet(object):
         """The average limb darkening profiles for each passband
         """
         return self._mean
-
 
     @property
     def profile_uncertainties(self):
@@ -362,27 +350,28 @@ class LDPSetCreator(object):
         If true, use model spectra binned to 5 nm, otherwise use the original files.
 
     """
+
     def __init__(self, teff, logg, z, filters: List,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True, lowres: bool = False):
+                 photon_counting: bool = True, lowres: bool = True):
 
-        self.teff  = teff
-        self.logg  = logg
+        self.teff = teff
+        self.logg = logg
         self.metal = z
 
         self.use_lowres = lowres
 
-        def set_lims(ms_or_samples, pts, plims=(0.135, 100-0.135) ):
+        def set_lims(ms_or_samples, pts, plims=(0.135, 100 - 0.135)):
             if len(ms_or_samples) > 2:
                 return a_lims_hilo(pts, *percentile(ms_or_samples, plims))
             else:
                 return a_lims(pts, *ms_or_samples)
 
         if not limits:
-            teff_lims  = set_lims(teff, TEFF_POINTS)
-            logg_lims  = set_lims(logg, LOGG_POINTS)
-            metal_lims = set_lims(z,    Z_POINTS)
+            teff_lims = set_lims(teff, TEFF_POINTS)
+            logg_lims = set_lims(logg, LOGG_POINTS)
+            metal_lims = set_lims(z, Z_POINTS)
         else:
             teff_lims, logg_lims, metal_lims = limits
 
@@ -391,12 +380,12 @@ class LDPSetCreator(object):
             print("logg limits: " + str(logg_lims))
             print("Fe/H limits: " + str(metal_lims))
 
-        self.client   = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
-        self.files    = self.client.local_filenames
-        self.filters  = filters
-        self.nfiles   = len(self.files)
+        self.client = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres)
+        self.files = self.client.local_filenames
+        self.filters = filters
+        self.nfiles = len(self.files)
         self.nfilters = len(filters)
-        self.qe       = qe or (lambda wl: 1.)
+        self.qe = qe or (lambda wl: 1.)
 
         @retry(stop=stop_after_attempt(3), wait=wait_fixed(15), retry=retry_if_exception_type(Exception))
         def download_files():
@@ -412,32 +401,31 @@ class LDPSetCreator(object):
         # Initialize the basic arrays
         # ---------------------------
         with pf.open(self.files[0]) as hdul:
-            wl0  = hdul[0].header['crval1'] * 1e-1 # Wavelength at d[:,0] [nm]
-            dwl  = hdul[0].header['cdelt1'] * 1e-1 # Delta wavelength     [nm]
-            nwl  = hdul[0].header['naxis1']        # Number of wl samples
-            wl   = wl0 + arange(nwl)*dwl
-            self.mu   = hdul[1].data
-            self.z    = sqrt(1-self.mu**2)
-            self.nmu  = self.mu.size
+            wl0 = hdul[0].header['crval1'] * 1e-1  # Wavelength at d[:,0] [nm]
+            dwl = hdul[0].header['cdelt1'] * 1e-1  # Delta wavelength     [nm]
+            nwl = hdul[0].header['naxis1']  # Number of wl samples
+            wl = wl0 + arange(nwl) * dwl
+            self.mu = hdul[1].data
+            self.z = sqrt(1 - self.mu ** 2)
+            self.nmu = self.mu.size
 
         # Read in the fluxes
         # ------------------
         self.fluxes = zeros([self.nfilters, self.nfiles, self.nmu])
-        for fid,f in enumerate(self.filters):
+        for fid, f in enumerate(self.filters):
             if photon_counting:
                 w = f(wl) * wl * self.qe(wl)
             else:
                 w = f(wl) * self.qe(wl)
 
             for did, df in enumerate(self.files):
-                self.fluxes[fid, did, :] = (pf.getdata(df)*w).mean(1)
-                self.fluxes[fid, did, :] /= self.fluxes[fid,did,-1]
+                self.fluxes[fid, did, :] = (pf.getdata(df) * w).mean(1)
+                self.fluxes[fid, did, :] /= self.fluxes[fid, did, -1]
 
         # Create n_filter interpolators
         # -----------------------------
-        points = array([[f.teff,f.logg,f.z] for f in self.client.files])
-        self.itps = [NDI(points, self.fluxes[i,:,:]) for i in range(self.nfilters)]
-
+        points = array([[f.teff, f.logg, f.z] for f in self.client.files])
+        self.itps = [NDI(points, self.fluxes[i, :, :]) for i in range(self.nfilters)]
 
     def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None):
         """Creates a set of limb darkening profiles
@@ -456,22 +444,22 @@ class LDPSetCreator(object):
            (teff_in, logg_in, metal_in).
         """
 
-        def sample(a,b):
-            return a if a is not None else (b if len(b)!=2 else normal(*b, size=nsamples))
+        def sample(a, b):
+            return a if a is not None else (b if len(b) != 2 else normal(*b, size=nsamples))
 
-        teff  = sample(teff,  self.teff)
-        logg  = sample(logg,  self.logg)
+        teff = sample(teff, self.teff)
+        logg = sample(logg, self.logg)
         metal = sample(metal, self.metal)
 
         minsize = min(nsamples, min(map(len, [teff, logg, metal])))
-        samples = ones([minsize,3])
-        samples[:,0] = clip(teff,  *self.client.teffl)[:minsize]
-        samples[:,1] = clip(logg,  *self.client.loggl)[:minsize]
-        samples[:,2] = clip(metal, *self.client.zl)[:minsize]
+        samples = ones([minsize, 3])
+        samples[:, 0] = clip(teff, *self.client.teffl)[:minsize]
+        samples[:, 1] = clip(logg, *self.client.loggl)[:minsize]
+        samples[:, 2] = clip(metal, *self.client.zl)[:minsize]
 
         self.ldp_samples = zeros([self.nfilters, minsize, self.nmu])
         for iflt in range(self.nfilters):
-            self.ldp_samples[iflt,:,:] = self.itps[iflt](samples)
+            self.ldp_samples[iflt, :, :] = self.itps[iflt](samples)
 
         return LDPSet(self.filter_names, self.mu, self.ldp_samples)
 
