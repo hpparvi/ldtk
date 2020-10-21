@@ -40,7 +40,7 @@ edir_medres_visir = 'v3.0/SpecIntFITS'
 FN_TEMPLATE_VISIR = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-2011-SpecInt.fits'
 FN_TEMPLATE_VIS = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
 
-datasets = 'vis', 'vis_lowres', 'visir'
+datasets = 'vis', 'vis-lowres', 'visir'
 
 class Client(object):
     def __init__(self, limits=None, verbosity: int = 1, offline_mode: bool = False,
@@ -73,7 +73,7 @@ class Client(object):
             self.edir = edir_medres_vis
             self.fn_template = FN_TEMPLATE_VIS
             self.fsize = 15.2
-        elif dataset == 'vis_lowres':
+        elif dataset == 'vis-lowres':
             self.edir = edir_lowres_vis
             self.fn_template = FN_TEMPLATE_VIS
             self.fsize = 0.334
