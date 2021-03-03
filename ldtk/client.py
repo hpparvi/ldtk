@@ -36,16 +36,17 @@ warnings.filterwarnings('ignore')
 edir_medres_vis = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 edir_lowres_vis = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 edir_medres_visir = 'v3.0/SpecIntFITS'
+edir_lowres_visir = 'v3.0/SpecInt50FITS/'
 
 FN_TEMPLATE_VISIR = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-2011-SpecInt.fits'
 FN_TEMPLATE_VIS = 'lte{teff:05d}-{logg:4.2f}{z:+3.1f}.PHOENIX-ACES-AGSS-COND-SPECINT-2011.fits'
 
-datasets = 'vis', 'vis-lowres', 'visir'
+datasets = 'vis', 'vis-lowres', 'visir', 'visir-lowres'
 
 class Client(object):
     def __init__(self, limits=None, verbosity: int = 1, offline_mode: bool = False,
                  update_server_file_list: bool = False, cache: str = None, lowres: bool = False,
-                 dataset: str = 'vis_lowres'):
+                 dataset: str = 'vis-lowres'):
         """LDTk client
 
         Args:
@@ -64,7 +65,7 @@ class Client(object):
         self.offline_mode = offline_mode
 
         if lowres:
-            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis_lowres" instead.')
+            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis-lowres" instead.')
 
         if dataset not in datasets:
             raise(ValueError(f'Dataset must be one in {datasets}'))
@@ -81,6 +82,10 @@ class Client(object):
             self.edir = edir_medres_visir
             self.fn_template = FN_TEMPLATE_VISIR
             self.fsize = 32.4
+        elif dataset == 'visir-lowres':
+            self.edir = edir_lowres_visir
+            self.fn_template = FN_TEMPLATE_VISIR
+            self.fsize = 0.681
 
         self._cache = cache or join(ldtk_root, f'cache_{dataset}')
         self._server_file_list = join(ldtk_root, f'server_file_list_{dataset}.pkl')

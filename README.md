@@ -52,6 +52,18 @@ The second approach can be used to constrain the LD model parameter space direct
 
 ## News
 
+- Version 1.5 (3.3.2021)
+
+    - LDTk can now use four different sets of the modelled stellar spectra: `vis`, `vis-lowres`, `visir`, and `visir-lowres`.
+      The first, `vis`, is the original one by Husser et al (2013) spanning from 50 nm to 2600 nm; `vis-lowres` is a lower
+      resolution version of the original dataset, binned to a 5 nm resolution; `visir` is a new version of the original
+      model set extended to span from 50 nm to 5500 nm; and `visir-lowres` is a lower resolution version of the new model
+      set binned to 5 nm resolution.
+      
+    - The model set can be chosen in the `LDPSetCreator` initialisation by setting the `dataset` argument. LDTk uses 
+      `vis-lowres` as a default, but `visir-lowres` can be used when dealing with IR observations, and the original
+      versions (`vis` and `visir`) can be used if a spectral resolution higher than 5 nm is required.
+
 - Version 1.4
 
     - Added automatic detection and re-download of corrupted fits files (a highly welcome contribution by T. Fatahi).
