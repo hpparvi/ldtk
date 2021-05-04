@@ -52,6 +52,12 @@ The second approach can be used to constrain the LD model parameter space direct
 
 ## News
 
+- Version 1.6 (4.5.2021)
+
+    - Added `ldtk.SVOFilter` filter class that creates a filter using the [Spanish Virtual Observatory (SVO) Filter 
+      Profile Service (FPS)](http://svo2.cab.inta-csic.es/theory/fps/). The FPS contains over 10000 named filters, and
+      creating a filter based on the FPS data is now as simple as giving the `SVOFilter` the SVO filter name.
+
 - Version 1.5 (3.3.2021)
 
     - LDTk can now use four different sets of the modelled stellar spectra: `vis`, `vis-lowres`, `visir`, and `visir-lowres`.

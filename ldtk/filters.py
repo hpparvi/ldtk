@@ -16,10 +16,13 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
+from typing import Optional
 
 import pandas as pd
 
 from pathlib import Path
+
+from matplotlib.pyplot import subplots, setp
 from numpy import array, argsort, zeros_like, arange, loadtxt, linspace
 from scipy.interpolate import interp1d
 
@@ -32,11 +35,66 @@ class Filter(object):
         raise NotImplementedError
 
     def plot(self, ax=None, wl_min=300, wl_max=1000, wl_res=500):
-        from matplotlib.pyplot import subplots, setp
         if ax is None:
             fig, ax = subplots()
         wl = linspace(wl_min, wl_max, wl_res)
         ax.plot(wl, self(wl))
+        setp(ax, xlabel='Wavelength [nm]', ylabel='Transmission')
+        return ax
+
+
+class SVOFilter(Filter):
+    shortcuts = dict(kepler='Kepler/Kepler.k',
+                     tess='TESS/TESS.Red',
+                     sdss_g='SLOAN/SDSS.g',
+                     sdss_r='SLOAN/SDSS.r',
+                     sdss_i='SLOAN/SDSS.i',
+                     sdss_z='SLOAN/SDSS.z')
+
+    def __init__(self, name: str):
+        """Creates a filter using the Spanish Virtual Observatory (SVO) Filter Profile Service.
+
+        Creates a filter using the Spanish Virtual Observatory (SVO) Filter Profile
+        Service. The filter name can be either an SVO filter name such as "SLOAN/SDSS.z"
+        or "Kepler/Kepler.k" or a name shortcut. You can get a dictionary of available
+        shortcuts from `SVOFilter.shortcuts`.
+
+        Notes
+        -----
+        - Requires an internet connection.
+        - The SVO FPS is hosted at http://svo2.cab.inta-csic.es/theory/fps/
+
+        Parameters
+        ----------
+        name : str
+            SVO filter name such as "SLOAN/SDSS.z" or a name shortcut such as "TESS".
+        """
+        from astroquery.svo_fps import SvoFps as svo
+        if name.lower() in self.shortcuts.keys():
+            name = self.shortcuts[name.lower()]
+        super().__init__(name)
+        self._svo_data = svo.get_transmission_data(name)
+        self.wavelength = wl = self._svo_data['Wavelength'].compressed().astype('d') / 10
+        self.transmission = tr = self._svo_data['Transmission'].compressed().astype('d')
+        self.transmission /= self.transmission.max()
+        self.bbox = wl[tr > 1e-2][[0, -1]]
+        self._ip = interp1d(self.wavelength, self.transmission, kind='cubic')
+
+    def __call__(self, wl):
+        return self._ip(wl)
+
+    def sample(self, n: Optional[int] = 100):
+        return self.wavelength, self.transmission
+
+    def plot(self, bbox: bool = False, ax=None):
+        if ax is None:
+            fig, ax = subplots()
+        else:
+            fig, ax = None, ax
+
+        ax.plot(self.wavelength, self.transmission)
+        if bbox:
+            ax.axvspan(*self.bbox, fill=False, ls='--', ec='k')
         setp(ax, xlabel='Wavelength [nm]', ylabel='Transmission')
         return ax
 
