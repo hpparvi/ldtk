@@ -346,22 +346,22 @@ class LDPSetCreator(object):
     photon_counting: bool, optional
         If true, calculate photon-weighted averages (e.g., for a CCD), otherwise calculate energy-weighted averages.
 
-    lowres: bool, optional
-        If true, use model spectra binned to 5 nm, otherwise use the original files.
+    dataset: str, optional
+        Set of stellar spectrum models to use. Options are "vis", "vis-lowres", "visir", "visir-lowres"
 
     """
 
     def __init__(self, teff, logg, z, filters: List,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis_lowres'):
+                 photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis-lowres'):
 
         self.teff = teff
         self.logg = logg
         self.metal = z
 
         if lowres:
-            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis_lowres" instead.')
+            raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis-lowres" instead.')
 
         def set_lims(ms_or_samples, pts, plims=(0.135, 100 - 0.135)):
             if len(ms_or_samples) > 2:
