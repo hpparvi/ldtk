@@ -18,7 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 from numba import njit
-from numpy import ndarray, sqrt, zeros, power, exp, log
+from numpy import ndarray, sqrt, zeros, power, exp, log, log2
 
 
 # Model implementations
@@ -96,7 +96,7 @@ def ld_power_2(mu, pv):
 @njit(fastmath=True)
 def ld_power_2_pm(mu, pv):
     c = 1 - pv[0] + pv[1]
-    a = log(c/pv[1])
+    a = log2(c/pv[1])
     return 1. - c * (1. - mu**a)
 
 
