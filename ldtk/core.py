@@ -18,13 +18,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import os
-from os.path import join, exists
 import warnings
-from pathlib import Path
-
 import astropy.io.fits as pf
 from glob import glob
-from os.path import exists, join, basename
+from os.path import basename, exists, join
+from pathlib
 from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete, append,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
@@ -47,7 +45,7 @@ except ImportError:
 
 is_root = mpi_rank == 0
 
-ldtk_root  = os.getenv('LDTK_ROOT') or join(str(Path.home()), '.ldtk')
+ldtk_root  = os.getenv('LDTK_ROOT') or str(pathlib.Path.home() / '.ldtk')  # requires pathlib import for Py < 3.4
 if not exists(ldtk_root):
     os.mkdir(ldtk_root)
 
