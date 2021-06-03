@@ -22,7 +22,7 @@ import warnings
 import astropy.io.fits as pf
 from glob import glob
 from os.path import basename, exists, join
-from pathlib
+import pathlib
 from pickle import dump, load
 from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, ones_like, delete, append,
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
