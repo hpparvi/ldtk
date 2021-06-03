@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 import os
 from os.path import join, exists
 import warnings
+from pathlib import Path
+
 import astropy.io.fits as pf
 from glob import glob
 from os.path import exists, join, basename
@@ -45,7 +47,7 @@ except ImportError:
 
 is_root = mpi_rank == 0
 
-ldtk_root  = os.getenv('LDTK_ROOT') or join(os.getenv('HOME'),'.ldtk')
+ldtk_root  = os.getenv('LDTK_ROOT') or join(str(Path.home()), '.ldtk')
 if not exists(ldtk_root):
     os.mkdir(ldtk_root)
 
