@@ -78,7 +78,7 @@ class SVOFilter(Filter):
         self.transmission = tr = self._svo_data['Transmission'].compressed().astype('d')
         self.transmission /= self.transmission.max()
         self.bbox = wl[tr > 1e-2][[0, -1]]
-        self._ip = interp1d(self.wavelength, self.transmission, kind='cubic')
+        self._ip = interp1d(self.wavelength, self.transmission, kind='cubic', bounds_error=False, fill_value=0.0)
 
     def __call__(self, wl):
         return self._ip(wl)
