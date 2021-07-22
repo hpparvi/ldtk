@@ -52,6 +52,14 @@ The second approach can be used to constrain the LD model parameter space direct
 
 ## News
 
+- Version 1.7 (22.7.2021)
+
+    - Improved the way the stellar limb is defined. LDTk now fits an LD model together with a smoothstep function to
+      find the edge of the star. This approach should remove the need for manual edge definition completely.
+      
+    - LDTk now resamples the original models to a linear sampling in mu since this makes LD coefficient estimation
+      more straightforward.  
+
 - Version 1.6 (4.5.2021)
 
     - Added `ldtk.SVOFilter` filter class that creates a filter using the [Spanish Virtual Observatory (SVO) Filter 

@@ -24,16 +24,17 @@ from typing import Optional, Union, List
 
 import astropy.io.fits as pf
 from numba import njit
-from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, clip
+from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, \
+    clip, full_like, inf
 from numpy.random import normal, multivariate_normal, uniform
 from scipy.interpolate import interp1d, LinearNDInterpolator as NDI
-from scipy.optimize import fmin
+from scipy.optimize import fmin, minimize
 from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
 from .client import Client
 from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
-                      GeneralModel, Power2Model, Power2MPModel, models)
+                      GeneralModel, Power2Model, Power2MPModel, models, ld_power_2)
 
 
 def load_ldpset(filename):
@@ -67,6 +68,18 @@ def lnlike3d(model, _lnc1, _lnc2, _mean, _err2):
     return lnl
 
 
+def smootherstep(x, e0: float, e1: float):
+    x = clip((x-e0) / (e1-e0), 0.0, 1.0)
+    return x * x * x * (x * (6*x - 15.) + 10.)
+
+
+def ldm_with_edge(mu, e0, e1, ldc, ldm=ld_power_2):
+    if e0 > e1:
+        return full_like(mu, inf)
+    nmu = clip((mu-e1)/(1-e1), 0.0, 1.0)
+    return smootherstep(mu, e0, e1) * ldm(nmu, ldc)
+
+
 # Main classes
 # ============
 class LDPSet(object):
@@ -98,11 +111,10 @@ class LDPSet(object):
         self._z_orig = self._z.copy()
         self._mean_orig = self._mean.copy()
         self._std_orig = self._std.copy()
+        self._em = 1.0
 
-        self._limb_i = abs(diff(self._mean_orig.mean(0))).argmax()
-        self._limb_z = self._z_orig[self._limb_i]
-        self._limb_mu = sqrt(1. - self._z_orig[self._limb_i] ** 2)
-        self.redefine_limb()
+        self.fit_limb()
+        self.resample_linear_mu()
 
         self._lnl = zeros(self._nfilters)
         self.set_uncertainty_multiplier(1.)
@@ -163,6 +175,15 @@ class LDPSet(object):
         self._lnc2 = array([-log(self._em * e).sum() for e in self._std])  ## 2nd ln likelihood term
         self._err2 = array([(self._em * e) ** 2 for e in self._std])  ## variances
 
+    def fit_limb(self):
+        def minfun(x, mu, flux):
+            return ((flux - ldm_with_edge(mu, x[0], x[1], x[2:])) ** 2).sum()
+        mu_new = linspace(self._mu_orig[0], 1, 1500)
+        flux_new = interp1d(self._mu_orig, self._mean_orig.mean(0), 'quadratic')(mu_new)
+        res = minimize(minfun, array([0.05, 0.15, 0.5, 1.5]), (mu_new, flux_new), method='Nelder-Mead')
+        self._limb_minimization = res
+        self.set_limb_mu(res.x[1])
+
     def set_limb_z(self, z):
         """Set the z value that defines the edge of the stellar disk
 
@@ -177,9 +198,9 @@ class LDPSet(object):
         self.reset_sampling()
 
     def set_limb_mu(self, mu):
-        self._limb_mu = mu
         self._limb_i = argmin(abs(self._mu_orig - mu))
-        self._limb_z = sqrt(1. - mu ** 2)
+        self._limb_mu = self._mu_orig[self._limb_i]
+        self._limb_z = sqrt(1. - self._limb_mu**2)
         self.reset_sampling()
 
     def redefine_limb(self):
