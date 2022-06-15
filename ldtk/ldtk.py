@@ -233,6 +233,7 @@ class LDPSet(object):
             self._mu = mu
             self._z = sqrt(1 - self._mu ** 2)
 
+        self._ldps = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._ldps])
         self._mean = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._mean])
         self._std = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
         self._update()
