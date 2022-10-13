@@ -23,15 +23,19 @@ import pandas as pd
 from pathlib import Path
 
 from matplotlib.pyplot import subplots, setp
-from numpy import array, argsort, zeros_like, arange, loadtxt, linspace
+from numpy import array, argsort, zeros_like, arange, loadtxt, linspace, floor
 from scipy.interpolate import interp1d
+from scipy.optimize import root_scalar
 
 
-class Filter(object):
+class Filter:
     def __init__(self, name):
         self.name = name
 
     def __call__(self, wl):
+        raise NotImplementedError
+
+    def integrate(self, wavelengths, values):
         raise NotImplementedError
 
     def plot(self, ax=None, wl_min=300, wl_max=1000, wl_res=500):
@@ -128,6 +132,15 @@ class TabulatedFilter(Filter):
     def __call__(self, wl):
         return self._ip(wl)
 
+    def integrate(self, wavelengths, values):
+        w = self(wavelengths)
+        if values.ndim == 2 and values.shape[1] == wavelengths.size:
+            return (values * w).sum(1)
+        elif values.ndim == 1 and values.size == wavelengths.size:
+            return (values * w).sum()
+        else:
+            raise ValueError
+
 
 class BoxcarFilter(Filter):
     """Boxcar filter."""
@@ -147,6 +160,34 @@ class BoxcarFilter(Filter):
         w = zeros_like(wl)
         w[(wl>self.wl_min) & (wl<self.wl_max)] = 1.
         return w
+
+    def integrate(self, wavelengths, values):
+        w = self(wavelengths)
+        if values.ndim == 2 and values.shape[1] == wavelengths.size:
+            return (values * w).sum(1)
+        elif values.ndim == 1 and values.size == wavelengths.size:
+            return (values * w).sum()
+        else:
+            raise ValueError
+
+
+class DeltaFilter(Filter):
+    def __init__(self, name, wl):
+        super().__init__(name)
+        self.wl = wl
+
+    def integrate(self, wavelengths, values):
+        i = int(root_scalar(lambda i: wavelengths[int(floor(i))]-self.wl, bracket=[0, wavelengths.size-1]).root)
+        if wavelengths[i] > self.wl:
+            i -= 1
+        x = (self.wl - wavelengths[i])/(wavelengths[i+1]-wavelengths[i])
+
+        if values.ndim == 2 and values.shape[1] == wavelengths.size:
+            return (1-x)*values[:,i] + x*values[:,i+1]
+        elif values.ndim == 1 and values.size == wavelengths.size:
+            return (1-x)*values[i] + x*values[i+1]
+        else:
+            raise ValueError
 
 
 def create_tess():
@@ -168,4 +209,4 @@ kepler = TabulatedFilter('kepler',
 
 tess = create_tess()
 
-__all__ = 'Filter TabulatedFilter BoxcarFilter sdss_g sdss_r sdss_i sdss_z kepler tess'.split()
+__all__ = 'Filter TabulatedFilter BoxcarFilter DeltaFilter sdss_g sdss_r sdss_i sdss_z kepler tess'.split()

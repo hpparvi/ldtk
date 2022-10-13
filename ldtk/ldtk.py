@@ -437,12 +437,12 @@ class LDPSetCreator(object):
         self.fluxes = zeros([self.nfilters, self.nfiles, self.nmu])
         for fid, f in enumerate(self.filters):
             if photon_counting:
-                w = f(wl) * wl * self.qe(wl)
+                w = wl * self.qe(wl)
             else:
-                w = f(wl) * self.qe(wl)
+                w = self.qe(wl)
 
             for did, df in enumerate(self.files):
-                self.fluxes[fid, did, :] = (pf.getdata(df) * w).mean(1)
+                self.fluxes[fid, did, :] = f.integrate(wl, pf.getdata(df) * w)
                 self.fluxes[fid, did, :] /= self.fluxes[fid, did, -1]
 
         # Create n_filter interpolators
