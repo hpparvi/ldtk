@@ -23,7 +23,7 @@ import pandas as pd
 from pathlib import Path
 
 from matplotlib.pyplot import subplots, setp
-from numpy import array, argsort, zeros_like, arange, loadtxt, linspace, floor
+from numpy import array, argsort, zeros_like, arange, loadtxt, linspace, floor, argmin
 from scipy.interpolate import interp1d
 from scipy.optimize import root_scalar
 

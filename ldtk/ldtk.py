@@ -25,7 +25,7 @@ from typing import Optional, Union, List
 import astropy.io.fits as pf
 from numba import njit
 from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, \
-    clip, full_like, inf
+    clip, full_like, inf, ndarray
 from numpy.random import normal, multivariate_normal, uniform
 from scipy.interpolate import interp1d, LinearNDInterpolator as NDI
 from scipy.optimize import fmin, minimize
@@ -373,14 +373,17 @@ class LDPSetCreator(object):
 
     """
 
-    def __init__(self, teff, logg, z, filters: List,
+    def __init__(self, teff, logg, z, filters: Optional[List] = None,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
-                 photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis-lowres'):
+                 photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis-lowres',
+                 save_memory: bool = True):
 
         self.teff = teff
         self.logg = logg
         self.metal = z
+        self.photon_counting = photon_counting
+        self.save_memory = save_memory
 
         if lowres:
             raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis-lowres" instead.')
@@ -405,10 +408,13 @@ class LDPSetCreator(object):
 
         self.client = Client(limits=[teff_lims, logg_lims, metal_lims], cache=cache, lowres=lowres, dataset=dataset)
         self.files = self.client.local_filenames
-        self.filters = filters
         self.nfiles = len(self.files)
-        self.nfilters = len(filters)
         self.qe = qe or (lambda wl: 1.)
+
+        self.filters: Optional[list] = None
+        self.nfilters: Optional[int] = None
+        self.fluxes: Optional[ndarray] = None
+        self.raw_spectra: Optional[list] = None
 
         @retry(stop=stop_after_attempt(3), wait=wait_fixed(15), retry=retry_if_exception_type(Exception))
         def download_files():
@@ -427,22 +433,38 @@ class LDPSetCreator(object):
             wl0 = hdul[0].header['crval1'] * 1e-1  # Wavelength at d[:,0] [nm]
             dwl = hdul[0].header['cdelt1'] * 1e-1  # Delta wavelength     [nm]
             nwl = hdul[0].header['naxis1']  # Number of wl samples
-            wl = wl0 + arange(nwl) * dwl
+            self.wl = wl0 + arange(nwl) * dwl
             self.mu = hdul[1].data
             self.z = sqrt(1 - self.mu ** 2)
             self.nmu = self.mu.size
 
+        if not self.save_memory:
+            self.raw_spectra = []
+            for did, df in enumerate(self.files):
+                self.raw_spectra.append(pf.getdata(df))
+
+        if filters is not None:
+            self.init_filters(filters)
+
+    def init_filters(self, filters: List):
+        self.filters = filters
+        self.nfilters = len(filters)
+
         # Read in the fluxes
         # ------------------
         self.fluxes = zeros([self.nfilters, self.nfiles, self.nmu])
-        for fid, f in enumerate(self.filters):
-            if photon_counting:
-                w = wl * self.qe(wl)
+        for did, df in enumerate(self.files):
+            if self.save_memory:
+                d =  pf.getdata(df)
             else:
-                w = self.qe(wl)
+                d = self.raw_spectra[did]
+            for fid, f in enumerate(self.filters):
+                if self.photon_counting:
+                    w = self.wl * self.qe(self.wl)
+                else:
+                    w = self.qe(self.wl)
 
-            for did, df in enumerate(self.files):
-                self.fluxes[fid, did, :] = f.integrate(wl, pf.getdata(df) * w)
+                self.fluxes[fid, did, :] = f.integrate(self.wl, d*w)
                 self.fluxes[fid, did, :] /= self.fluxes[fid, did, -1]
 
         # Create n_filter interpolators
@@ -469,6 +491,9 @@ class LDPSetCreator(object):
 
         def sample(a, b):
             return a if a is not None else (b if len(b) != 2 else normal(*b, size=nsamples))
+
+        if self.filters is None:
+            raise ValueError("Can't create LD profiles without filters")
 
         teff = sample(teff, self.teff)
         logg = sample(logg, self.logg)
