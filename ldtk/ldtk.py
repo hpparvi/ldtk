@@ -25,7 +25,7 @@ from typing import Optional, Union, List
 import astropy.io.fits as pf
 from numba import njit
 from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, \
-    clip, full_like, inf, ndarray
+    clip, full_like, inf, ndarray, full
 from numpy.random import normal, multivariate_normal, uniform
 from scipy.interpolate import interp1d, LinearNDInterpolator as NDI
 from scipy.optimize import fmin, minimize
@@ -234,8 +234,8 @@ class LDPSet(object):
             self._z = sqrt(1 - self._mu ** 2)
 
         self._ldps = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._ldps])
-        self._mean = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._mean])
-        self._std = array([interp1d(muc, f, kind='cubic')(self._mu) for f in self._std])
+        self._mean = array([self._ldps[i, :, :].mean(0) for i in range(self._nfilters)])
+        self._std = array([self._ldps[i, :, :].std(0) for i in range(self._nfilters)])
         self._update()
 
     def _coeffs(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25,
@@ -259,7 +259,13 @@ class LDPSet(object):
           ldmodel      LDModel  limb darkening model to fit
         """
         npar = ldmodel.npar or ngc
-        qcs = [fmin(lambda pv: -self._lnlike(pv, flt=iflt, ldmodel=ldmodel), 0.1 * ones(npar), disp=0) for iflt in range(self._nfilters)]
+
+        qcs = []
+        x0 = full(npar, 0.1)
+        for iflt in range(self._nfilters):
+            qcs.append(fmin(lambda pv: -self._lnlike(pv, flt=iflt, ldmodel=ldmodel), x0, disp=0))
+            x0 = qcs[-1]
+
         covs = []
         for iflt, qc in enumerate(qcs):
             s = zeros(npar)
