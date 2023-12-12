@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: >-
+  ldtk: Limb Darkening Toolkit
+message: >-
+  If you made the use of PyLDTk, I would appreciate it if you give credit.
+type: software
+date-released: 2015-09-10
+authors:
+  - family-names: Parviainen
+    given-names: Hannu
+    email: hannu.parviainen@physics.ox.ac.uk
+    orcid: 'https://orcid.org/0000-0001-5519-1391'
+  - family-names: Aigrain
+    given-names: Suzanne
+    orcid: 'https://orcid.org/0000-0003-1453-0574'
+identifiers:
+  - type: 'doi'
+    value: '10.1093/mnras/stv1857'
+  - type: 'ascl-id'
+    value: '1510.003'
+repository-code: 'https://github.com/hpparvi/ldtk'
+abstract: >-
+  We present a python package ldtk that automates the calculation of custom
+  stellar limb-darkening (LD) profiles and model-specific limb-darkening
+  coefficients using the library of phoenix-generated specific intensity
+  spectra by Husser et al. The aim of the package is to facilitate analyses
+  requiring custom generated LD profiles, such as the studies of exoplanet
+  transits -- especially transmission spectroscopy, where the transit modelling
+  is carried out for custom narrow passbands -- eclipsing binaries,
+  interferometry, and microlensing events. First, ldtk can be used to compute
+  custom LD profiles with uncertainties propagated from the uncertainties in
+  the stellar parameter estimates. Secondly, ldtk can be used to estimate the
+  LD-model-specific coefficients with uncertainties for the most common LD
+  models. Thirdly, ldtk can be directly integrated into the log posterior
+  computation of any pre-existing modelling code with minimal modifications.
+  The last approach can be used to constrain the LD model parameter space
+  directly by the LD profile, allowing for the marginalization over the LD
+  parameter space without the need to approximate the constraint from the LD
+  profile using a prior.
+license: GPL-2.0
