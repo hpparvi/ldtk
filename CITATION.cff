@@ -42,4 +42,10 @@ abstract: >-
   directly by the LD profile, allowing for the marginalization over the LD
   parameter space without the need to approximate the constraint from the LD
   profile using a prior.
+keywords:
+  - 'gravitational lensing: micro'
+  - 'methods: numerical'
+  - 'techniques: interferometric'
+  - 'planets and satellites: general'
+  - 'binaries: eclipsing'
 license: GPL-2.0
