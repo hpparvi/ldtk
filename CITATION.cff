@@ -12,8 +12,9 @@ authors:
     given-names: Suzanne
     orcid: 'https://orcid.org/0000-0003-1453-0574'
 identifiers:
-  - type: 'ascl-id'
+  - type: other
     value: '1510.003'
+    description: ascl
 repository-code: 'https://github.com/hpparvi/ldtk'
 abstract: >-
   We present a python package ldtk that automates the calculation of custom
