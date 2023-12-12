@@ -3,15 +3,6 @@ title: >-
   ldtk: Limb Darkening Toolkit
 message: >-
   If you made the use of PyLDTk, I would appreciate it if you give credit.
-type: article
-journal: 'MNRAS'
-year: 2015
-month: 9
-day: 10
-start: 3821
-end: 3826
-volume: 453
-doi: 10.1093/mnras/stv1857
 authors:
   - family-names: Parviainen
     given-names: Hannu
@@ -48,4 +39,14 @@ keywords:
   - 'techniques: interferometric'
   - 'planets and satellites: general'
   - 'binaries: eclipsing'
+preferred-citation:
+  type: article
+  doi: "10.1093/mnras/stv1857"
+  journal: 'MNRAS'
+  year: 2015
+  month: 9
+  day: 10
+  start: 3821
+  end: 3826
+  volume: 453
 license: GPL-2.0
