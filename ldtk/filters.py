@@ -102,6 +102,15 @@ class SVOFilter(Filter):
         setp(ax, xlabel='Wavelength [nm]', ylabel='Transmission')
         return ax
 
+    def integrate(self, wavelengths, values):
+        w = self(wavelengths)
+        if values.ndim == 2 and values.shape[1] == wavelengths.size:
+            return (values * w).sum(1)
+        elif values.ndim == 1 and values.size == wavelengths.size:
+            return (values * w).sum()
+        else:
+            raise ValueError
+
 
 class TabulatedFilter(Filter):
     """Tabulated filter where the transmission is
