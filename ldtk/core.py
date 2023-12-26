@@ -89,16 +89,19 @@ def v_from_poly(lf, x0, dx=1e-3, nx=5):
     var = -1./p.deriv(2)(x0)
     return var
 
+
 def is_inside(a,lims):
     """Is a value inside the limits"""
     return a[(a>=lims[0])&(a<=lims[1])]
 
 
-def a_lims(a,v,e,s=3):
-    return a[[max(0,a.searchsorted(v-s*e)-1),min(a.size-1, a.searchsorted(v+s*e))]]
+def a_lims(a, v, e, s=3):
+    return a[[max(0, a.searchsorted(v-s*e)-1), min(a.size-1, a.searchsorted(v+s*e))]]
 
-def a_lims_hilo(a,lo,hi):
-    return a[[max(0,a.searchsorted(lo)-1),min(a.size-1, a.searchsorted(hi))]]
+
+def a_lims_hilo(a, lo, hi):
+    return a[[max(0, a.searchsorted(lo)-1), min(a.size-1, a.searchsorted(hi))]]
+
 
 ## Utility classes
 ## ===============
