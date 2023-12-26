@@ -1,4 +1,4 @@
-# PyLDTk
+# LDTk
 
 [![Licence](http://img.shields.io/badge/license-GPLv2-blue.svg?style=flat)](http://www.gnu.org/licenses/gpl-2.0.html)
 [![MNRAS](https://img.shields.io/badge/MNRAS-10.1093%2Fmnras%2Fstv1857-blue.svg)](http://mnras.oxfordjournals.org/content/453/4/3821.abstract)
@@ -7,7 +7,7 @@
 [![DOI](https://zenodo.org/badge/5871/hpparvi/ldtk.svg)](https://zenodo.org/badge/latestdoi/5871/hpparvi/ldtk)
 [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
 
-**Py**thon **L**imb **D**arkening **T**ool**k**it - a Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary passbands using the stellar spectrum model library by Husser et al (2013).
+Python **L**imb **D**arkening **T**ool**k**it - a Python toolkit for calculating stellar limb darkening profiles and model-specific coefficients for arbitrary passbands using the stellar spectrum model library by Husser et al (2013).
 
 ```python
 from ldtk import LDPSetCreator, BoxcarFilter
@@ -40,7 +40,7 @@ lnlike = ps.lnlike_qd([0.25,0.05],flt=0) # Quad. law log L for the first filter
 
 ## Overview
 
-PyLDTk automates the calculation of custom stellar limb darkening (LD) profiles and model-specific limb darkening coefficients (LDC) using the library of PHOENIX-generated specific intensity spectra by Husser et al. (2013).
+LDTk automates the calculation of custom stellar limb darkening (LD) profiles and model-specific limb darkening coefficients (LDC) using the library of PHOENIX-generated specific intensity spectra by Husser et al. (2013).
 
 The aim of the package is to facilitate exoplanet transit light curve modeling, especially transmission
 spectroscopy where the modeling is carried out for custom narrow passbands. The package can be  
@@ -150,11 +150,11 @@ The limb darkening profiles can be resampled to a desired sampling in ``mu`` usi
 
 ## Citing
 
-If you use PyLDTk in your research, please cite the PyLDTk paper
+If you use LDTk in your research, please cite the LDTk paper
 
     Parviainen, H. & Aigrain, S. MNRAS 453, 3821–3826 (2015) (DOI:10.1093/mnras/stv1857).
 
-and the paper describing the spectrum library without which PyLDTk would be rather useless
+and the paper describing the spectrum library without which LDTk would be rather useless
 
     Husser, T.-O. et al. A&A 553, A6 (2013) (DOI:10.1051/0004-6361/201219058).
 
