@@ -23,7 +23,7 @@ import pandas as pd
 from pathlib import Path
 
 from matplotlib.pyplot import subplots, setp
-from numpy import array, argsort, zeros_like, arange, loadtxt, linspace, floor, argmin
+from numpy import array, argsort, zeros_like, arange, loadtxt, linspace, floor, argmin, searchsorted
 from scipy.interpolate import interp1d
 from scipy.optimize import root_scalar
 
@@ -172,6 +172,10 @@ class BoxcarFilter(Filter):
 
     def integrate(self, wavelengths, values):
         w = self(wavelengths)
+        if all(w < 1e-10):
+            ix = searchsorted(wavelengths, 0.5*(self.wl_min+self.wl_max))
+            w[ix] = 1
+
         if values.ndim == 2 and values.shape[1] == wavelengths.size:
             return (values * w).sum(1)
         elif values.ndim == 1 and values.size == wavelengths.size:
