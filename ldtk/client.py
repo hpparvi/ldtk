@@ -88,7 +88,7 @@ class Client(object):
             self.fsize = 0.681
 
         self._cache = cache or join(ldtk_root, f'cache_{dataset}')
-        self._server_file_list = join(ldtk_root, f'server_file_list_{dataset}.pkl')
+        self._server_file_list = join(cache, f'server_file_list_{dataset}.pkl') if cache is not None else join(ldtk_root, f'server_file_list_{dataset}.pkl')
 
         if not exists(self._cache):
             os.mkdir(self._cache)
