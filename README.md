@@ -109,7 +109,7 @@ The second approach can be used to constrain the LD model parameter space direct
 
 Use `pip`
 
-    pip install [--user] [--upgrade] ldtk
+    pip install [--user] [--upgrade] LDTk
 
 or clone the source from github and follow the basic Python package installation routine
 
