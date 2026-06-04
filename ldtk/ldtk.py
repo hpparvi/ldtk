@@ -25,14 +25,14 @@ from typing import Optional, Union, List
 import astropy.io.fits as pf
 from numba import njit
 from numpy import argmin, zeros, sqrt, array, diff, log, linspace, ones, diag, exp, cov, asarray, percentile, arange, \
-    clip, full_like, inf, ndarray, full
+    clip, full_like, inf, ndarray, full, isfinite
 from numpy.random import normal, multivariate_normal, uniform
 from scipy.interpolate import interp1d, LinearNDInterpolator as NDI
 from scipy.optimize import fmin, minimize
 from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
 from .client import Client
-from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm
+from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm, message
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
                       GeneralModel, Power2Model, Power2MPModel, models, ld_power_2)
 
@@ -514,6 +514,25 @@ class LDPSetCreator(object):
         self.ldp_samples = zeros([self.nfilters, minsize, self.nmu])
         for iflt in range(self.nfilters):
             self.ldp_samples[iflt, :, :] = self.itps[iflt](samples)
+
+        # Drop samples that fall outside the available PHOENIX model grid
+        # ---------------------------------------------------------------
+        # The (teff, logg, z) samples are clipped to the rectangular grid limits, but
+        # the available models can be missing some grid nodes (e.g. hot, low-gravity
+        # stars are not in the library). The LinearNDInterpolator returns NaN for any
+        # sample falling outside the convex hull of the available models. A single such
+        # sample would poison the mean profile and the limb fit, turning the whole
+        # LDPSet into NaNs, so we drop the offending samples here.
+        finite = isfinite(self.ldp_samples).all((0, 2))
+        n_bad = int((~finite).sum())
+        if finite.sum() == 0:
+            raise ValueError(
+                "All parameter samples fall outside the available PHOENIX model grid. The requested "
+                "(teff, logg, z) lies in a region where models are missing (e.g. hot, low-gravity "
+                "stars). Adjust the parameters or their uncertainties.")
+        if n_bad > 0:
+            message(f"Dropped {n_bad} of {minsize} samples that fell outside the available model grid.")
+            self.ldp_samples = self.ldp_samples[:, finite, :]
 
         return LDPSet(self.filter_names, self.mu, self.ldp_samples)
 

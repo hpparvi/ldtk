@@ -1,6 +1,6 @@
 [project]
 name = "LDTk"
-version = "1.8.4"
+version = "1.8.6"
 description = 'Toolkit to calculate stellar limb darkening profiles for arbitrary filters.'
 authors=[{name='Hannu Parviainen', email='hpparvi@gmail.com'}]
 classifiers=[
