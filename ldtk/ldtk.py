@@ -380,6 +380,30 @@ class LDPSet(object):
             elif ldcs.ndim == 3:
                 return lnlike3d(m, self._lnc1, self._lnc2, self._mean, self._err2)
 
+    def diagnostics(self, nmodes: int = 6):
+        """Print a per-filter summary of the reduced-rank likelihood decomposition.
+
+        Shows the number of eigenmodes kept by the cumulative-explained-variance
+        truncation and the leading relative eigenvalue spectrum. A kept mode
+        count that grows beyond ~3-4 indicates that the stellar parameter
+        posterior explores a strongly nonlinear region of the spectrum grid
+        (or that the truncation threshold needs attention).
+
+        Parameters
+        ----------
+        nmodes : int, optional
+            Number of leading eigenmodes to list per filter.
+        """
+        for name, ll in zip(self._filters, self._rrll):
+            rel = ll.all_eigenvalues / ll.all_eigenvalues.sum()
+            cum = rel.cumsum()
+            n = min(nmodes, rel.size)
+            print(f"{name}: {ll.nk} of {rel.size} eigenmodes kept (cev = {self._rr_cev})")
+            print("  mode  rel. eigenvalue  cumulative")
+            for i in range(n):
+                kept = '*' if i < ll.nk else ' '
+                print(f"  {i + 1:3d}{kept}  {rel[i]:15.3e}  {cum[i]:10.6f}")
+
     @property
     def profile_averages(self):
         """The average limb darkening profiles for each passband

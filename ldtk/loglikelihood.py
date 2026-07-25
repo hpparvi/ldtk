@@ -90,6 +90,7 @@ class ReducedRankLL:
         nkeep = int(searchsorted(evals.cumsum() / evals.sum(), cev)) + 1
         if nk is not None:
             nkeep = min(nkeep, nk)
+        self.all_eigenvalues = evals
         self.eigenvalues = evals[:nkeep]
         self.eigenvectors = evecs[:, :nkeep]
         self.nk = self.eigenvalues.size

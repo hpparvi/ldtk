@@ -142,6 +142,18 @@ class TestLDPSetLikelihood(unittest.TestCase):
         _, err_dg = self.ps_dg.coeffs_qd()
         self.assertTrue((err_rr > err_dg).all())
 
+    def test_diagnostics(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        buf = StringIO()
+        with redirect_stdout(buf):
+            self.ps_rr.diagnostics()
+        out = buf.getvalue()
+        for iflt in range(2):
+            nk = self.ps_rr._rrll[iflt].nk
+            nall = self.ps_rr._rrll[iflt].all_eigenvalues.size
+            self.assertIn(f'f{iflt}: {nk} of {nall} eigenmodes kept', out)
+
     def test_likelihood_mode_validation(self):
         with self.assertRaises(ValueError):
             create_synthetic_ldpset(likelihood='full')
