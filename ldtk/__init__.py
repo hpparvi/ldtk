@@ -19,4 +19,5 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from .version import __version__
 from .ldtk import LDPSetCreator, LDPSet, load_ldpset
+from .loglikelihood import ReducedRankLL
 from .filters import BoxcarFilter, SVOFilter, TabulatedFilter, DeltaFilter, sdss_g, sdss_r, sdss_i, sdss_z, kepler, tess

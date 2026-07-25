@@ -33,6 +33,7 @@ from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_t
 
 from .client import Client
 from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm, message
+from .loglikelihood import ReducedRankLL
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
                       GeneralModel, Power2Model, Power2MPModel, models, ld_power_2)
 
@@ -93,10 +94,27 @@ class LDPSet(object):
         Array of mu values
     ldp_samples : list
         A list containing arrays of limb darkening profile samples for each filter
-
+    likelihood : str, optional
+        Log-likelihood mode, either 'reduced-rank' (default) or 'diagonal'.
+        The reduced-rank mode evaluates a Normal log-likelihood in the
+        principal subspace of the profile sample covariance, which accounts
+        for the strong correlations between the mu points and makes the
+        likelihood insensitive to the mu-grid resolution set by `resample`.
+        The 'diagonal' mode restores the pre-1.6 behavior that assumes the
+        mu points are independent: it overestimates the constraining power
+        of the profiles by a large factor and its sharpness scales with the
+        number of mu points, so it is kept only for comparison purposes.
+    cev : float, optional
+        Cumulative explained variance threshold for the reduced-rank
+        likelihood: the smallest number of leading eigenmodes explaining at
+        least this fraction of the total profile sample variance is kept.
+    nk : int, optional
+        Optional hard limit on the number of eigenmodes kept by the
+        reduced-rank likelihood.
     """
 
-    def __init__(self, filters, mu, ldp_samples):
+    def __init__(self, filters, mu, ldp_samples, likelihood: str = 'reduced-rank',
+                 cev: float = 0.999, nk: Optional[int] = None):
         self._filters = filters
         self._nfilters = len(filters)
         self._mu = mu
@@ -112,6 +130,10 @@ class LDPSet(object):
         self._mean_orig = self._mean.copy()
         self._std_orig = self._std.copy()
         self._em = 1.0
+        self._rr_cev = cev
+        self._rr_nk = nk
+        self._rrll: List[ReducedRankLL] = []
+        self.set_likelihood_mode(likelihood)
 
         self.fit_limb()
         self.resample_linear_mu()
@@ -174,6 +196,22 @@ class LDPSet(object):
         self._lnc1 = -0.5 * self._nmu * log(TWO_PI)  ## 1st ln likelihood term
         self._lnc2 = array([-log(self._em * e).sum() for e in self._std])  ## 2nd ln likelihood term
         self._err2 = array([(self._em * e) ** 2 for e in self._std])  ## variances
+        self._rrll = [ReducedRankLL(self._mu, self._ldps[i], cev=self._rr_cev, nk=self._rr_nk)
+                      for i in range(self._nfilters)]
+
+    def set_likelihood_mode(self, mode: str):
+        """Set the log-likelihood mode.
+
+        Parameters
+        ----------
+        mode : str
+            Either 'reduced-rank' (default, accounts for the correlations
+            between the mu points) or 'diagonal' (the pre-1.6 behavior that
+            assumes independent mu points).
+        """
+        if mode not in ('reduced-rank', 'diagonal'):
+            raise ValueError(f"Unknown likelihood mode '{mode}', should be either 'reduced-rank' or 'diagonal'.")
+        self._lh_mode = mode
 
     def fit_limb(self):
         def minfun(x, mu, flux):
@@ -211,6 +249,12 @@ class LDPSet(object):
         self._std = self._std_orig[:, self._limb_i:].copy()
 
     def set_uncertainty_multiplier(self, em):
+        """Set a multiplier that scales the profile uncertainties.
+
+        With the reduced-rank likelihood this is an optional prior-widening
+        knob (the covariance is scaled by em**2); it is no longer needed to
+        correct for the overconfidence of the diagonal likelihood.
+        """
         self._em = em
         self._update()
 
@@ -318,12 +362,23 @@ class LDPSet(object):
 
         m = ldmodel.evaluate(self._mu, ldcs)
 
-        if flt is not None:
-            return lnlike1d(m, flt, self._lnc1, self._lnc2, self._mean, self._err2)
-        elif ldcs.ndim == 2:
-            return lnlike2d(m, self._lnc1, self._lnc2, self._mean, self._err2)
-        elif ldcs.ndim == 3:
-            return lnlike3d(m, self._lnc1, self._lnc2, self._mean, self._err2)
+        if self._lh_mode == 'reduced-rank':
+            if flt is not None:
+                return self._rrll[flt](m[0, 0], self._em)
+            elif ldcs.ndim == 2:
+                return sum(self._rrll[i](m[0, i], self._em) for i in range(self._nfilters))
+            elif ldcs.ndim == 3:
+                lnl = zeros(m.shape[0])
+                for i in range(self._nfilters):
+                    lnl += self._rrll[i](m[:, i, :], self._em)
+                return lnl
+        else:
+            if flt is not None:
+                return lnlike1d(m, flt, self._lnc1, self._lnc2, self._mean, self._err2)
+            elif ldcs.ndim == 2:
+                return lnlike2d(m[0], self._lnc1, self._lnc2, self._mean, self._err2)
+            elif ldcs.ndim == 3:
+                return lnlike3d(m, self._lnc1, self._lnc2, self._mean, self._err2)
 
     @property
     def profile_averages(self):
