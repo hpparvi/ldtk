@@ -16,6 +16,9 @@ keywords = ['astronomy',  'astrophysics',  'exoplanets']
 dependencies = ["numpy", "numba", "scipy", "astropy", "tqdm", "traitlets", "tenacity",
                 "semantic_version", "pandas", "matplotlib"]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
 [project.urls]
 homepage = 'https://github.com/hpparvi/ldtk'
 

@@ -70,7 +70,7 @@ def ld_general(mu, pv):
     ldp = zeros(mu.size)
     for i in range(pv.size):
         ldp += pv[i] * (1.0 - mu ** (i + 1))
-    return ldp
+    return 1.0 - ldp
 
 
 @njit(fastmath=True)
