@@ -91,7 +91,7 @@ def test_batched_evaluation():
 
 
 def test_diagonal_mode_unchanged(ps_dg):
-    """The diagonal mode must reproduce the pre-1.6 per-filter likelihood."""
+    """The diagonal mode must reproduce the legacy (LDTk <= 1.8) per-filter likelihood."""
     m = Power2Model.evaluate(ps_dg._mu, COEFFS)[0, 0]
     expected = ps_dg._lnc1 + ps_dg._lnc2[0] - 0.5 * ((ps_dg._mean[0] - m) ** 2 / ps_dg._err2[0]).sum()
     assert ps_dg.lnlike_p2(COEFFS, flt=0) == pytest.approx(expected, abs=1e-8)

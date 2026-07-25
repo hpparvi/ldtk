@@ -100,8 +100,8 @@ class LDPSet(object):
         principal subspace of the profile sample covariance, which accounts
         for the strong correlations between the mu points and makes the
         likelihood insensitive to the mu-grid resolution set by `resample`.
-        The 'diagonal' mode restores the pre-1.6 behavior that assumes the
-        mu points are independent: it overestimates the constraining power
+        The 'diagonal' mode restores the legacy (LDTk <= 1.8) behavior that
+        assumes the mu points are independent: it overestimates the constraining power
         of the profiles by a large factor and its sharpness scales with the
         number of mu points, so it is kept only for comparison purposes.
     cev : float, optional
@@ -206,8 +206,8 @@ class LDPSet(object):
         ----------
         mode : str
             Either 'reduced-rank' (default, accounts for the correlations
-            between the mu points) or 'diagonal' (the pre-1.6 behavior that
-            assumes independent mu points).
+            between the mu points) or 'diagonal' (the legacy LDTk <= 1.8
+            behavior that assumes independent mu points).
         """
         if mode not in ('reduced-rank', 'diagonal'):
             raise ValueError(f"Unknown likelihood mode '{mode}', should be either 'reduced-rank' or 'diagonal'.")
