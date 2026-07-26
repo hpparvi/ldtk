@@ -1,20 +1,32 @@
 .. _api:
-..module:: ldtk
 
 API
 ===
 
-Client
-------
+Profile creation
+----------------
 
-.. module:: ldtk.client
-.. autoclass:: ldtk.client.Client
+.. autoclass:: ldtk.ldtk.LDPSetCreator
    :members:
+
+Limb darkening profile set
+--------------------------
+
+.. autoclass:: ldtk.ldtk.LDPSet
+   :members:
+
+.. autofunction:: ldtk.ldtk.load_ldpset
+
+Log-likelihood
+--------------
+
+.. autoclass:: ldtk.loglikelihood.ReducedRankLL
+   :members:
+   :special-members: __call__
 
 Filters
 -------
 
-.. module:: ldtk.filters
 .. autoclass:: ldtk.filters.Filter
    :members:
 
@@ -22,6 +34,12 @@ Filters
    :members:
 
 .. autoclass:: ldtk.filters.TabulatedFilter
+   :members:
+
+.. autoclass:: ldtk.filters.SVOFilter
+   :members:
+
+.. autoclass:: ldtk.filters.DeltaFilter
    :members:
 
 Pre-defined filters
@@ -32,22 +50,17 @@ Pre-defined filters
 .. autodata:: ldtk.filters.sdss_i
 .. autodata:: ldtk.filters.sdss_z
 .. autodata:: ldtk.filters.kepler
-   :annotation: Blah
-
-Limb darkening profile set
---------------------------
-
-.. module:: ldtk.ldtk
-.. autoclass:: ldtk.ldtk.LDPSet
-   :members:
-
-.. autoclass:: ldtk.ldtk.LDPSetCreator
-   :members:
-
+.. autodata:: ldtk.filters.tess
 
 Limb darkening models
 ---------------------
 
-.. module:: ldtk.ldmodel
 .. automodule:: ldtk.ldmodel
+   :members:
+   :exclude-members: evaluate
+
+Client
+------
+
+.. autoclass:: ldtk.client.Client
    :members:

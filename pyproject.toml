@@ -18,6 +18,7 @@ dependencies = ["numpy", "numba", "scipy", "astropy", "tqdm", "traitlets", "tena
 
 [project.optional-dependencies]
 test = ["pytest"]
+docs = ["sphinx", "sphinx-book-theme", "myst-parser", "numpydoc"]
 
 [project.urls]
 homepage = 'https://github.com/hpparvi/ldtk'
