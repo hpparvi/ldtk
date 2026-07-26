@@ -136,7 +136,6 @@ class LDPSet(object):
         self.set_likelihood_mode(likelihood)
 
         self.fit_limb()
-        self.resample_linear_mu()
 
         self._lnl = zeros(self._nfilters)
         self.set_uncertainty_multiplier(1.)
@@ -251,9 +250,11 @@ class LDPSet(object):
     def set_uncertainty_multiplier(self, em):
         """Set a multiplier that scales the profile uncertainties.
 
-        With the reduced-rank likelihood this is an optional prior-widening
-        knob (the covariance is scaled by em**2); it is no longer needed to
-        correct for the overconfidence of the diagonal likelihood.
+        Scales the profile sample covariance by em**2 to account for the
+        imperfections of the stellar atmosphere models: the simulated
+        profiles can contain unknown biases and trends that do not agree
+        with observations. With the reduced-rank likelihood it is no longer
+        needed to correct for the overconfidence of the diagonal likelihood.
         """
         self._em = em
         self._update()
