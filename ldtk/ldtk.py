@@ -34,6 +34,7 @@ from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_t
 from .client import Client
 from .core import TWO_PI, dx2, a_lims_hilo, a_lims, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_root, with_mpi, comm, message
 from .loglikelihood import ReducedRankLL
+from .rbf import RBFProfileInterpolator
 from .ldmodel import (LinearModel, QuadraticModel, TriangularQuadraticModel, SquareRootModel, NonlinearModel,
                       GeneralModel, Power2Model, Power2MPModel, models, ld_power_2)
 
@@ -457,19 +458,32 @@ class LDPSetCreator(object):
     dataset: str, optional
         Set of stellar spectrum models to use. Options are "vis", "vis-lowres", "visir", "visir-lowres"
 
+    interpolation: str, optional
+        Method used to evaluate the limb darkening profiles inside the model
+        grid, either 'linear' (default) or 'rbf'. The default interpolates
+        the grid profiles piecewise-linearly. The experimental 'rbf' option
+        uses a smooth radial basis function interpolant
+        (`ldtk.rbf.RBFProfileInterpolator`) that captures the nonlinearity of
+        the simulated profiles between the grid nodes and extrapolates
+        smoothly instead of returning NaN outside the convex hull of the
+        available nodes.
     """
 
     def __init__(self, teff, logg, z, filters: Optional[List] = None,
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
                  photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis-lowres',
-                 save_memory: bool = True):
+                 save_memory: bool = True, interpolation: str = 'linear'):
 
         self.teff = teff
         self.logg = logg
         self.metal = z
         self.photon_counting = photon_counting
         self.save_memory = save_memory
+
+        if interpolation not in ('linear', 'rbf'):
+            raise ValueError(f"Unknown interpolation method '{interpolation}', should be either 'linear' or 'rbf'.")
+        self.interpolation = interpolation
 
         if lowres:
             raise DeprecationWarning('lowres option is deprecated in LDTk 1.5, please use dataset="vis-lowres" instead.')
@@ -556,7 +570,10 @@ class LDPSetCreator(object):
         # Create n_filter interpolators
         # -----------------------------
         points = array([[f.teff, f.logg, f.z] for f in self.client.files])
-        self.itps = [NDI(points, self.fluxes[i, :, :]) for i in range(self.nfilters)]
+        if self.interpolation == 'rbf':
+            self.itps = [RBFProfileInterpolator(points, self.fluxes[i, :, :]) for i in range(self.nfilters)]
+        else:
+            self.itps = [NDI(points, self.fluxes[i, :, :]) for i in range(self.nfilters)]
 
     def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None):
         """Creates a set of limb darkening profiles
