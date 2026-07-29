@@ -1,6 +1,6 @@
 [project]
 name = "LDTk"
-version = "1.8.6"
+dynamic = ["version"]
 description = 'Toolkit to calculate stellar limb darkening profiles for arbitrary filters.'
 authors=[{name='Hannu Parviainen', email='hpparvi@gmail.com'}]
 classifiers=[
@@ -14,7 +14,7 @@ classifiers=[
 ]
 keywords = ['astronomy',  'astrophysics',  'exoplanets']
 dependencies = ["numpy", "numba", "scipy", "astropy", "tqdm", "traitlets", "tenacity",
-                "semantic_version", "pandas", "matplotlib"]
+                "pandas", "matplotlib"]
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -24,8 +24,11 @@ docs = ["sphinx", "sphinx-book-theme", "myst-parser", "numpydoc"]
 homepage = 'https://github.com/hpparvi/ldtk'
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_file = "ldtk/_version.py"
 
 [tool.setuptools.packages.find]
 include = ['ldtk', 'ldtk.filter_files']

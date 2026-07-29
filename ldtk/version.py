@@ -17,6 +17,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-from semantic_version import Version
 
-__version__ = Version('1.8.5')
+try:
+    from ._version import __version__
+except ImportError:
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+        __version__ = version('ldtk')
+    except PackageNotFoundError:
+        __version__ = '0.0.0+unknown'

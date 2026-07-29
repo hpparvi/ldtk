@@ -56,3 +56,4 @@ target/
 *~
 notebooks/.ipynb_checkpoints/
 *.dropbox.attr
+ldtk/_version.py
