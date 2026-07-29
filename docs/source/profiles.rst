@@ -54,6 +54,36 @@ spectroscopy work and are much faster to download; use the full-resolution
 sets when a spectral resolution better than 5 nm is required, and the
 ``visir`` variants when working in the infrared.
 
+.. _interpolation:
+
+Grid interpolation
+------------------
+
+The ``interpolation`` argument of :class:`~ldtk.ldtk.LDPSetCreator` selects
+how the profiles are evaluated between the nodes of the model grid:
+
+- ``'linear'`` (default): piecewise-linear interpolation over a Delaunay
+  triangulation of the grid nodes
+  (`scipy.interpolate.LinearNDInterpolator`).
+- ``'rbf'``: a smooth radial basis function interpolant
+  (:class:`~ldtk.rbf.RBFProfileInterpolator`, thin-plate-spline kernel).
+
+The simulated profiles are not linear functions of the stellar parameters,
+so the piecewise-linear interpolant linearizes real structure away inside
+each grid cell. In hold-out tests on the PHOENIX grid the RBF interpolant
+predicts a removed grid node roughly an order of magnitude more accurately,
+and in strongly nonlinear regimes (cool stars, molecular-band-dominated
+passbands) the resulting limb darkening coefficients can shift by a few
+times their uncertainties relative to the linear interpolation. The RBF
+interpolant also works on grids with missing nodes and extrapolates smoothly
+instead of returning NaN outside the convex hull of the available nodes
+(such samples are dropped in the linear mode):
+
+.. code-block:: python
+
+    sc = LDPSetCreator(teff=(3100, 50), logg=(5.0, 0.1), z=(0.0, 0.05),
+                       filters=filters, interpolation='rbf')
+
 The stellar limb and resampling
 -------------------------------
 

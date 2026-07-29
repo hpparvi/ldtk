@@ -461,8 +461,8 @@ class LDPSetCreator(object):
     interpolation: str, optional
         Method used to evaluate the limb darkening profiles inside the model
         grid, either 'linear' (default) or 'rbf'. The default interpolates
-        the grid profiles piecewise-linearly. The experimental 'rbf' option
-        uses a smooth radial basis function interpolant
+        the grid profiles piecewise-linearly. The 'rbf' option uses a
+        smooth radial basis function interpolant
         (`ldtk.rbf.RBFProfileInterpolator`) that captures the nonlinearity of
         the simulated profiles between the grid nodes and extrapolates
         smoothly instead of returning NaN outside the convex hull of the

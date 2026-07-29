@@ -24,6 +24,13 @@ Log-likelihood
    :members:
    :special-members: __call__
 
+Grid interpolation
+------------------
+
+.. autoclass:: ldtk.rbf.RBFProfileInterpolator
+   :members:
+   :special-members: __call__
+
 Filters
 -------
 
