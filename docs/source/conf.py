@@ -8,7 +8,7 @@ from importlib.metadata import version as get_version
 
 project = 'LDTk'
 author = 'Hannu Parviainen'
-copyright = '2017-2026, Hannu Parviainen'
+copyright = '2015-2026, Hannu Parviainen'
 
 release = get_version('LDTk')
 version = '.'.join(release.split('.')[:2])

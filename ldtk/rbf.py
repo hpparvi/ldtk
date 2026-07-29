@@ -1,6 +1,6 @@
 """
 Limb darkening toolkit
-Copyright (C) 2015  Hannu Parviainen <hpparvi@gmail.com>
+Copyright (C) 2015-2026  Hannu Parviainen <hpparvi@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
