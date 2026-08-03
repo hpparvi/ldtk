@@ -24,12 +24,6 @@ distribution. This is useful when using a high-order limb darkening model where
 the coefficients are often correlated, and priors estimated from tabulated
 values usually fail to include these correlations.
 
-Since version 1.9, the profile log-likelihood is evaluated with a
-:ref:`reduced-rank formulation <likelihoods>` that accounts for the strong
-correlations between the points of a limb darkening profile. This yields
-realistic limb darkening coefficient uncertainties and makes the likelihood
-insensitive to the profile sampling resolution.
-
 Example
 -------
 

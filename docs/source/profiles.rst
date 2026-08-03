@@ -16,16 +16,16 @@ filters into limb darkening profile samples:
     ps = sc.create_profiles(nsamples=500)
 
 Each of ``teff``, ``logg``, and ``z`` can be given either as a
-``(value, uncertainty)`` tuple — in which case the samples are drawn from a
-normal distribution — or as a 1D array of posterior samples from, e.g., a
-previous spectroscopic analysis. Alternative sample arrays can also be passed
+``(value, uncertainty)`` tuple (in which case the samples are drawn from a
+normal distribution) or as a 1D array of posterior samples from, e.g., a
+previous spectroscopic analysis. Alternatively, sample arrays can also be passed
 directly to :meth:`~ldtk.ldtk.LDPSetCreator.create_profiles`.
 
 For every parameter sample, the specific intensity profile is interpolated
 from the PHOENIX grid for each filter, giving a set of profile samples whose
 scatter propagates the stellar parameter uncertainties. Samples that fall
 outside the coverage of the model library (some corners of the grid, e.g. hot
-low-gravity stars, have no models) are dropped with a message.
+low-gravity stars, have no models) are dropped with a warning.
 
 By default, LDTk calculates photon-weighted averages appropriate for
 photon-counting detectors (CCDs); set ``photon_counting=False`` for
@@ -62,22 +62,12 @@ Grid interpolation
 The ``interpolation`` argument of :class:`~ldtk.ldtk.LDPSetCreator` selects
 how the profiles are evaluated between the nodes of the model grid:
 
-- ``'linear'`` (default): piecewise-linear interpolation over a Delaunay
+- ``'linear'``: piecewise-linear interpolation over a Delaunay
   triangulation of the grid nodes
   (`scipy.interpolate.LinearNDInterpolator`).
-- ``'rbf'``: a smooth radial basis function interpolant
+- ``'rbf'`` (default): a smooth radial basis function interpolant
   (:class:`~ldtk.rbf.RBFProfileInterpolator`, thin-plate-spline kernel).
-
-The simulated profiles are not linear functions of the stellar parameters,
-so the piecewise-linear interpolant linearizes real structure away inside
-each grid cell. In hold-out tests on the PHOENIX grid the RBF interpolant
-predicts a removed grid node roughly an order of magnitude more accurately,
-and in strongly nonlinear regimes (cool stars, molecular-band-dominated
-passbands) the resulting limb darkening coefficients can shift by a few
-times their uncertainties relative to the linear interpolation. The RBF
-interpolant also works on grids with missing nodes and extrapolates smoothly
-instead of returning NaN outside the convex hull of the available nodes
-(such samples are dropped in the linear mode):
+  Introduced in LDTk 1.9, and in most cases preferred over the ``linear`` approach.
 
 .. code-block:: python
 

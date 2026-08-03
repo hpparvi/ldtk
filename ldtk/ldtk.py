@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 from functools import partial
 from pathlib import Path
 from pickle import load, dump
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Literal
 
 import astropy.io.fits as pf
 from numba import njit
@@ -473,7 +473,7 @@ class LDPSetCreator(object):
                  qe=None, limits=None, offline_mode: bool = False,
                  force_download: bool = False, verbose: bool = False, cache: Optional[Union[str, Path]] = None,
                  photon_counting: bool = True, lowres: bool = False, dataset: str = 'vis-lowres',
-                 save_memory: bool = True, interpolation: str = 'linear'):
+                 save_memory: bool = True, interpolation: Literal['linear', 'rbf'] = 'rbf'):
 
         self.teff = teff
         self.logg = logg

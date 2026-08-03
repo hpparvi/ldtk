@@ -26,8 +26,8 @@ be fetched from the SVO Filter Profile Service:
 2. Create the limb darkening profiles
 -------------------------------------
 
-:class:`~ldtk.ldtk.LDPSetCreator` takes the stellar parameters — each either as
-a ``(value, uncertainty)`` tuple or as an array of posterior samples — and the
+:class:`~ldtk.ldtk.LDPSetCreator` takes the stellar parameters (each either as
+a ``(value, uncertainty)`` tuple or as an array of posterior samples) and the
 filter list. It downloads (and caches) the PHOENIX spectra bracketing the
 parameter ranges, integrates them over each passband, and builds an
 interpolator over (T\ :sub:`eff`, log g, z):
