@@ -58,21 +58,9 @@ parameter vectors per step.
 How the likelihood is calculated
 --------------------------------
 
-The original PHOENIX profiles are physical stellar atmosphere simulations
-tabulated at 78 values of :math:`\mu`, and they are not linear functions of
-the three stellar parameters (T\ :sub:`eff`, log g, z). LDTk generates the
-profile samples by piecewise-linear interpolation inside the 3D parameter
-space, which changes this: within a single cell of the model grid the sampled
-profiles are exactly linear in the parameters, and the physical nonlinearity
-of the simulated profiles enters only at the grid-node resolution.
-
-Either way, the profile samples are functions of only three latent
-parameters, so the values of a profile at different :math:`\mu` points are
-strongly correlated: a profile tabulated at ~100 points carries only a
-handful of statistically independent numbers. Since version 1.9, LDTk
-accounts for this with a reduced-rank Normal log-likelihood
-(:class:`~ldtk.loglikelihood.ReducedRankLL`) following the Karhunen–Loève
-eigenmode formalism of `Tegmark et al. (1997)
+Since version 1.9, LDTk calculates the likelihood using reduced-rank Normal
+log-likelihood method (:class:`~ldtk.loglikelihood.ReducedRankLL`) following
+the Karhunen–Loève eigenmode formalism of `Tegmark et al. (1997)
 <https://ui.adsabs.harvard.edu/abs/1997ApJ...480...22T/>`_.
 
 The empirical covariance of the profile samples is eigendecomposed, and the
@@ -96,9 +84,7 @@ variance; an optional hard cap ``nk`` can also be given. Both are set in the
 Compared to the earlier likelihood that treated every :math:`\mu` point as an
 independent measurement, this
 
-* yields realistic limb darkening coefficient uncertainties (the independence
-  assumption overcounted the profile information content by a factor of
-  roughly ``nmu / K``), and
+* yields more realistic limb darkening coefficient uncertainties, and
 * makes the likelihood insensitive to the :math:`\mu` resampling resolution:
   the information content is set by the eigenvalue spectrum, not by the
   number of tabulated points.
@@ -127,9 +113,8 @@ The legacy likelihood
 The pre-1.9 likelihood, which assumes independent :math:`\mu` points with a
 diagonal covariance, is available for comparison by passing
 ``likelihood='diagonal'`` to :class:`~ldtk.ldtk.LDPSet` or by calling
-:meth:`~ldtk.ldtk.LDPSet.set_likelihood_mode`. Note that it is overconfident
-by a large factor and that its sharpness grows with the number of
-:math:`\mu` points set by the resampling.
+:meth:`~ldtk.ldtk.LDPSet.set_likelihood_mode`. Note that it can be overconfident
+and that its sharpness grows with the number of :math:`\mu` points set by the resampling.
 
 The uncertainty multiplier
 --------------------------
