@@ -31,7 +31,7 @@ from tqdm.auto import tqdm
 
 from .core import ldtk_root, TEFF_POINTS, LOGG_POINTS, Z_POINTS, is_inside, SpecIntFile, message
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore', category=AstropyWarning)
 
 edir_medres_vis = 'SpecIntFITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'
 edir_lowres_vis = 'SpecInt50FITS/PHOENIX-ACES-AGSS-COND-SPECINT-2011'

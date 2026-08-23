@@ -28,8 +28,13 @@ from numpy import (array, asarray, arange, linspace, zeros, zeros_like, ones, on
                    diag, poly1d, polyfit, vstack, diff, cov, exp, log, sqrt, clip, pi, percentile)
 from numpy.random import normal, uniform, multivariate_normal
 from tqdm.auto import tqdm
+from astropy.utils.exceptions import AstropyWarning
 
-warnings.filterwarnings('ignore')
+# The PHOENIX specific-intensity files carry headers astropy is unhappy about, so reading
+# them is noisy. Silence that, but only that: a bare `filterwarnings('ignore')` here would
+# suppress every warning in any process that imports ldtk, including warnings raised by
+# unrelated libraries long after the import.
+warnings.filterwarnings('ignore', category=AstropyWarning)
     
 try:
     from mpi4py import MPI
