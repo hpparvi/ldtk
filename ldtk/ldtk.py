@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-from functools import partial
 from pathlib import Path
 from pickle import load, dump
 from typing import Optional, Union, List, Literal
@@ -82,6 +81,94 @@ def ldm_with_edge(mu, e0, e1, ldc, ldm=ld_power_2):
     return smootherstep(mu, e0, e1) * ldm(nmu, ldc)
 
 
+# Public coeffs_* and lnlike_* methods
+# ====================================
+# LDPSet exposes one coefficient estimation method and one log-likelihood method
+# per limb darkening model. They are built here as real functions with explicit
+# signatures and docstrings (rather than as functools.partial instance attributes)
+# so that Sphinx autodoc, help(), and IDEs can see them.
+
+_MODEL_DESCRIPTIONS = {
+    LinearModel: 'linear',
+    QuadraticModel: 'quadratic',
+    TriangularQuadraticModel: 'triangular quadratic (Kipping 2013)',
+    SquareRootModel: 'square root',
+    NonlinearModel: 'nonlinear (four-parameter)',
+    GeneralModel: 'general (Giménez 2006)',
+    Power2Model: 'power-2 (Morello et al. 2017)',
+    Power2MPModel: 'power-2 with the Maxted (2018) parametrization',
+}
+
+
+def _coeffs_method(ldmodel):
+    def method(self, return_cm=False, do_mc=False, n_mc_samples=20000, mc_thin=25, mc_burn=25, ngc=4):
+        return self._coeffs(return_cm=return_cm, do_mc=do_mc, n_mc_samples=n_mc_samples, mc_thin=mc_thin,
+                            mc_burn=mc_burn, ldmodel=ldmodel, ngc=ngc)
+
+    method.__name__ = f'coeffs_{ldmodel.abbr}'
+    method.__qualname__ = f'LDPSet.{method.__name__}'
+    method.__doc__ = f"""Estimate the {_MODEL_DESCRIPTIONS[ldmodel]} limb darkening model coefficients.
+
+        The coefficients are found for each filter by maximizing the profile
+        log-likelihood. Their uncertainties are estimated from the curvature of
+        the log-likelihood, or with a Metropolis MCMC sampler if `do_mc` is set.
+
+        Parameters
+        ----------
+        return_cm : bool, optional
+            Return the full covariance matrix for each filter instead of the
+            coefficient standard deviations.
+        do_mc : bool, optional
+            Estimate the uncertainties with MCMC sampling.
+        n_mc_samples : int, optional
+            Number of MCMC iterations.
+        mc_thin : int, optional
+            MCMC chain thinning factor.
+        mc_burn : int, optional
+            Number of MCMC iterations discarded as burn-in.
+        ngc : int, optional
+            Number of coefficients. Used only by the general model.
+
+        Returns
+        -------
+        coeffs : ndarray
+            Coefficients with shape [filter, coefficient].
+        uncertainties : ndarray
+            Coefficient standard deviations with shape [filter, coefficient],
+            or covariance matrices with shape [filter, coefficient, coefficient]
+            if `return_cm` is set.
+        """
+    return method
+
+
+def _lnlike_method(ldmodel):
+    def method(self, ldcs, flt=None):
+        return self._lnlike(ldcs, flt=flt, ldmodel=ldmodel)
+
+    method.__name__ = f'lnlike_{ldmodel.abbr}'
+    method.__qualname__ = f'LDPSet.{method.__name__}'
+    method.__doc__ = f"""Log-likelihood of {_MODEL_DESCRIPTIONS[ldmodel]} limb darkening model coefficients.
+
+        Parameters
+        ----------
+        ldcs : array_like
+            Limb darkening coefficients. A 1D array is one coefficient set for
+            the filter given by `flt`. A 2D array [filter, coefficient] is one
+            set per filter and gives the joint log-likelihood. A 3D array
+            [set, filter, coefficient] gives the joint log-likelihood for each
+            set.
+        flt : int, optional
+            Filter index. Required for a 1D `ldcs` when the set has more than
+            one filter.
+
+        Returns
+        -------
+        float or ndarray
+            The log-likelihood, or an array of log-likelihoods for a 3D `ldcs`.
+        """
+    return method
+
+
 # Main classes
 # ============
 class LDPSet(object):
@@ -142,41 +229,23 @@ class LDPSet(object):
         self.set_uncertainty_multiplier(1.)
         self._update()
 
-        self.lnlike_ln = partial(self._lnlike, ldmodel=LinearModel)
-        self.lnlike_qd = partial(self._lnlike, ldmodel=QuadraticModel)
-        self.lnlike_tq = partial(self._lnlike, ldmodel=TriangularQuadraticModel)
-        self.lnlike_sq = partial(self._lnlike, ldmodel=SquareRootModel)
-        self.lnlike_nl = partial(self._lnlike, ldmodel=NonlinearModel)
-        self.lnlike_ge = partial(self._lnlike, ldmodel=GeneralModel)
-        self.lnlike_p2 = partial(self._lnlike, ldmodel=Power2Model)
-        self.lnlike_p2mp = partial(self._lnlike, ldmodel=Power2MPModel)
+    coeffs_ln = _coeffs_method(LinearModel)
+    coeffs_qd = _coeffs_method(QuadraticModel)
+    coeffs_tq = _coeffs_method(TriangularQuadraticModel)
+    coeffs_sq = _coeffs_method(SquareRootModel)
+    coeffs_nl = _coeffs_method(NonlinearModel)
+    coeffs_ge = _coeffs_method(GeneralModel)
+    coeffs_p2 = _coeffs_method(Power2Model)
+    coeffs_p2mp = _coeffs_method(Power2MPModel)
 
-        self.coeffs_ln = partial(self._coeffs, ldmodel=LinearModel)
-        self.coeffs_qd = partial(self._coeffs, ldmodel=QuadraticModel)
-        self.coeffs_tq = partial(self._coeffs, ldmodel=TriangularQuadraticModel)
-        self.coeffs_sq = partial(self._coeffs, ldmodel=SquareRootModel)
-        self.coeffs_nl = partial(self._coeffs, ldmodel=NonlinearModel)
-        self.coeffs_ge = partial(self._coeffs, ldmodel=GeneralModel)
-        self.coeffs_p2 = partial(self._coeffs, ldmodel=Power2Model)
-        self.coeffs_p2mp = partial(self._coeffs, ldmodel=Power2MPModel)
-
-        self.lnlike_ln.__doc__ = "Linear limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_qd.__doc__ = "Quadratic limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_tq.__doc__ = "Triangular quadratic limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_sq.__doc__ = "Square root limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_nl.__doc__ = "Nonlinear limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_ge.__doc__ = "General limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_p2.__doc__ = "Power-2 limb darkening model\n(coeffs, join=True, flt=None)"
-        self.lnlike_p2mp.__doc__ = "Power-2 limb darkening model with an alternative parametrisation\n(coeffs, join=True, flt=None)"
-
-        self.coeffs_ln.__doc__ = "Estimate the linear limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_qd.__doc__ = "Estimate the quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_tq.__doc__ = "Estimate the triangular quadratic limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_sq.__doc__ = "Estimate the square root limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_nl.__doc__ = "Estimate the nonlinear limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_ge.__doc__ = "Estimate the general limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_p2.__doc__ = "Estimate the power-2 limb darkening model coefficients, see LPDSet._coeffs for details."
-        self.coeffs_p2mp.__doc__ = "Estimate the power-2 MP limb darkening model coefficients, see LPDSet._coeffs for details."
+    lnlike_ln = _lnlike_method(LinearModel)
+    lnlike_qd = _lnlike_method(QuadraticModel)
+    lnlike_tq = _lnlike_method(TriangularQuadraticModel)
+    lnlike_sq = _lnlike_method(SquareRootModel)
+    lnlike_nl = _lnlike_method(NonlinearModel)
+    lnlike_ge = _lnlike_method(GeneralModel)
+    lnlike_p2 = _lnlike_method(Power2Model)
+    lnlike_p2mp = _lnlike_method(Power2MPModel)
 
     def save(self, filename):
         """Saves the LDPSet as a pickle
@@ -236,6 +305,13 @@ class LDPSet(object):
         self.reset_sampling()
 
     def set_limb_mu(self, mu):
+        """Set the mu value that defines the edge of the stellar disk
+
+        Parameters
+        ----------
+        mu : float
+            The mu (in the original PHOENIX sampling) that defines the edge of the stellar disk
+        """
         self._limb_i = argmin(abs(self._mu_orig - mu))
         self._limb_mu = self._mu_orig[self._limb_i]
         self._limb_z = sqrt(1. - self._limb_mu**2)
@@ -261,16 +337,28 @@ class LDPSet(object):
         self._update()
 
     def reset_sampling(self):
+        """Reset the profiles to the native PHOENIX mu sampling inside the current limb."""
         self.redefine_limb()
         self._update()
 
     def resample_linear_z(self, nz=100):
+        """Resample the profiles to `nz` points linearly spaced in z."""
         self.resample(z=linspace(0, 1, nz))
 
     def resample_linear_mu(self, nmu=100):
+        """Resample the profiles to `nmu` points linearly spaced in mu."""
         self.resample(mu=linspace(0, 1, nmu))
 
     def resample(self, mu=None, z=None):
+        """Resample the profiles to a given mu or z grid
+
+        Parameters
+        ----------
+        mu : array_like, optional
+            New mu grid.
+        z : array_like, optional
+            New z grid, used instead of `mu` if given.
+        """
         muc = self._mu.copy()
         if z is not None:
             self._z = z
@@ -575,21 +663,39 @@ class LDPSetCreator(object):
         else:
             self.itps = [NDI(points, self.fluxes[i, :, :]) for i in range(self.nfilters)]
 
-    def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None):
+    def create_profiles(self, nsamples=100, teff=None, logg=None, metal=None,
+                        likelihood: str = 'reduced-rank', cev: float = 0.999, nk: Optional[int] = None):
         """Creates a set of limb darkening profiles
 
            Parameters
            ----------
-           nsamples : int number of limb darkening profiles
-           teff  : array_like [optional]
-           logg  : array_like [optional]
-           metal : array_like [optional]
+           nsamples : int, optional
+               Number of limb darkening profile samples.
+           teff : array_like, optional
+               Effective temperature samples.
+           logg : array_like, optional
+               Surface gravity samples.
+           metal : array_like, optional
+               Metallicity samples.
+           likelihood : str, optional
+               Log-likelihood mode of the returned `LDPSet`, either
+               'reduced-rank' (default) or 'diagonal'.
+           cev : float, optional
+               Cumulative explained variance threshold for the reduced-rank
+               likelihood.
+           nk : int, optional
+               Hard limit on the number of eigenmodes kept by the reduced-rank
+               likelihood.
+
+           Returns
+           -------
+           LDPSet
 
            Notes
            -----
-           Teff, logg, and z are by default read in from the previously-created
-           object. However, alternative posterior distributions can be passed in via
-           (teff_in, logg_in, metal_in).
+           Teff, logg, and z are by default taken from the values given to the
+           `LDPSetCreator`. Alternative posterior samples can be passed with
+           `teff`, `logg`, and `metal`. See `LDPSet` for the likelihood options.
         """
 
         def sample(a, b):
@@ -631,7 +737,7 @@ class LDPSetCreator(object):
             message(f"Dropped {n_bad} of {minsize} samples that fell outside the available model grid.")
             self.ldp_samples = self.ldp_samples[:, finite, :]
 
-        return LDPSet(self.filter_names, self.mu, self.ldp_samples)
+        return LDPSet(self.filter_names, self.mu, self.ldp_samples, likelihood=likelihood, cev=cev, nk=nk)
 
     @property
     def filter_names(self):

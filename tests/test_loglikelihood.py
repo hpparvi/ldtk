@@ -5,7 +5,7 @@ from numpy import array, cov, linspace, log, zeros
 from numpy.random import default_rng
 from scipy.stats import multivariate_normal
 
-from ldtk.ldmodel import Power2Model
+from ldtk.ldmodel import Power2Model, models
 from ldtk.ldtk import LDPSet, ldm_with_edge
 from ldtk.loglikelihood import ReducedRankLL
 
@@ -168,3 +168,41 @@ def test_likelihood_mode_validation(ps_dg):
     ps = create_synthetic_ldpset()
     ps.set_likelihood_mode('diagonal')
     assert ps.lnlike_p2(COEFFS, flt=0) == pytest.approx(ps_dg.lnlike_p2(COEFFS, flt=0), abs=1e-8)
+
+
+def test_public_methods_are_documented_class_methods(ps_rr):
+    """coeffs_* and lnlike_* must be real class methods so that autodoc and IDEs see them."""
+    for abbr in [m.abbr for m in models.values()]:
+        for prefix in ('coeffs', 'lnlike'):
+            method = getattr(LDPSet, f'{prefix}_{abbr}')
+            assert callable(method)
+            assert method.__name__ == f'{prefix}_{abbr}'
+            assert 'Parameters' in method.__doc__
+    assert ps_rr.lnlike_p2(COEFFS, flt=0) == ps_rr._lnlike(COEFFS, flt=0, ldmodel=Power2Model)
+
+
+def test_create_profiles_forwards_likelihood_options():
+    """create_profiles must pass likelihood, cev, and nk on to the LDPSet it returns."""
+    from types import SimpleNamespace
+    from ldtk.ldtk import LDPSetCreator
+
+    nmu = 80
+    sc = object.__new__(LDPSetCreator)
+    sc.filters = [SimpleNamespace(name='a')]
+    sc.nfilters, sc.nmu = 1, nmu
+    sc.mu = linspace(0.02, 1.0, nmu)
+    sc.teff, sc.logg, sc.metal = (5500, 50), (4.5, 0.1), (0.0, 0.05)
+    sc.client = SimpleNamespace(teffl=(2300, 12000), loggl=(0, 6), zl=(-4, 1))
+
+    rng = default_rng(5)
+
+    def itp(samples):
+        c = 0.55 + 1e-4 * (samples[:, 0] - 5500) + 0.05 * (samples[:, 1] - 4.5)
+        return array([ldm_with_edge(sc.mu, 0.05, 0.15, array([ci, 0.45 + 0.1 * zi]))
+                      for ci, zi in zip(c, samples[:, 2])]) + rng.normal(0.0, 1e-8, (samples.shape[0], nmu))
+    sc.itps = [itp]
+
+    ps = sc.create_profiles(nsamples=50, likelihood='diagonal', cev=0.99, nk=2)
+    assert ps._lh_mode == 'diagonal'
+    assert ps._rr_cev == 0.99
+    assert ps._rr_nk == 2
