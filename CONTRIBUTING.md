@@ -101,9 +101,6 @@ coefficient input, so index it before passing slices on.
 4. Add the model to the documentation and to the tests in
    `tests/test_ld_models.py`.
 
-[`CLAUDE.md`](CLAUDE.md) also works as a detailed developer guide to the
-architecture and its pitfalls.
-
 ### Testing numerical code
 
 - Compare new code against an independent reference: closed-form profiles for
