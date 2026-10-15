@@ -50,50 +50,6 @@ spectroscopy where the modeling is carried out for custom narrow passbands. The 
 
 The second approach can be used to constrain the LD model parameter space directly by the LD profile, allowing for the marginalization over the whole parameter space that can explain the profile without the need to approximate this constraint by a prior distribution. This is useful when using a high-order limb darkening model where the coefficients are often correlated, and the priors estimated from the tabulated values usually fail to include these correlations.
 
-## News
-
-- Version 1.7 (22.7.2021)
-
-    - Improved the way the stellar limb is defined. LDTk now fits an LD model together with a smoothstep function to
-      find the edge of the star. This approach should remove the need for manual edge definition completely.
-      
-    - LDTk now resamples the original models to a linear sampling in mu since this makes LD coefficient estimation
-      more straightforward.  
-
-- Version 1.6 (4.5.2021)
-
-    - Added `ldtk.SVOFilter` filter class that creates a filter using the [Spanish Virtual Observatory (SVO) Filter 
-      Profile Service (FPS)](http://svo2.cab.inta-csic.es/theory/fps/). The FPS contains over 10000 named filters, and
-      creating a filter based on the FPS data is now as simple as giving the `SVOFilter` the SVO filter name.
-
-- Version 1.5 (3.3.2021)
-
-    - LDTk can now use four different sets of the modelled stellar spectra: `vis`, `vis-lowres`, `visir`, and `visir-lowres`.
-      The first, `vis`, is the original one by Husser et al (2013) spanning from 50 nm to 2600 nm; `vis-lowres` is a lower
-      resolution version of the original dataset, binned to a 5 nm resolution; `visir` is a new version of the original
-      model set extended to span from 50 nm to 5500 nm; and `visir-lowres` is a lower resolution version of the new model
-      set binned to 5 nm resolution.
-      
-    - The model set can be chosen in the `LDPSetCreator` initialisation by setting the `dataset` argument. LDTk uses 
-      `vis-lowres` as a default, but `visir-lowres` can be used when dealing with IR observations, and the original
-      versions (`vis` and `visir`) can be used if a spectral resolution higher than 5 nm is required.
-
-- Version 1.4
-
-    - Added automatic detection and re-download of corrupted fits files (a highly welcome contribution by T. Fatahi).
-
-- Version 1.3
-
-    - Changed to calculate the limb darkening models using numba. This should give a significant performance boost.
-
-- Version 1.2
-
-    - Added an option to use *low resolution* version of the original specific intensity spectra. These spectra are binned to 
-      5 nm resolution in wavelength and are kindly hosted by T. Husser at the same FTP server as the original spectra.
-    - The behavior can be toggled with a new ``LDPSetCreator`` initialisation argument, ``lowres``.
-    - **LDTk uses now low resolution spectra by default**. This is because the wavelength resolution should be good enough 
-      for most broadband photometry analyses, and the this decreases the download times and file storage sizes significantly.
-
 ## Requirements
 ### Core requirements
 - Python 2.7 or Python 3
