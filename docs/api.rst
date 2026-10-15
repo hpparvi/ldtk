@@ -49,8 +49,8 @@ Filters
 .. autoclass:: ldtk.filters.DeltaFilter
    :members:
 
-Pre-defined filters
-^^^^^^^^^^^^^^^^^^^
+Predefined filters
+^^^^^^^^^^^^^^^^^^
 
 .. autodata:: ldtk.filters.sdss_g
 .. autodata:: ldtk.filters.sdss_r

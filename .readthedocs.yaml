@@ -1,0 +1,29 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the OS, Python version, and other tools you might need
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.13"
+  jobs:
+    # Read the Docs clones shallowly; setuptools-scm needs the full history and
+    # tags to derive the package version shown in the docs.
+    post_checkout:
+      - git fetch --unshallow --tags || true
+
+# Build documentation in the "docs/" directory with Sphinx
+sphinx:
+   configuration: docs/conf.py
+
+# Install LDTk itself (autodoc imports it) together with the docs extra
+# (Sphinx, theme, and extensions) declared in pyproject.toml.
+python:
+   install:
+   - method: pip
+     path: .
+     extra_requirements:
+       - docs

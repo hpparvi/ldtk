@@ -16,9 +16,8 @@ or, for development, cloned from GitHub and installed in editable mode
     pip install -e ".[test]"     # test extra installs pytest
     pip install -e ".[docs]"     # docs extra installs Sphinx and the theme
 
-The core dependencies (numpy, scipy, numba, astropy, and others) are installed
-automatically. Using :class:`~ldtk.filters.SVOFilter` additionally requires
-`astroquery <https://astroquery.readthedocs.io/>`_.
+The dependencies (numpy, scipy, numba, astropy, astroquery, and others) are
+installed automatically.
 
 Spectrum cache
 --------------

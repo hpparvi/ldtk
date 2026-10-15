@@ -4,7 +4,7 @@ Limb Darkening Toolkit
 ======================
 
 LDTk automates the calculation of custom stellar limb darkening (LD) profiles
-and model-specific limb darkening coefficients (LDC) using the library of
+and model-specific limb darkening coefficients using the library of
 PHOENIX-generated specific intensity spectra by `Husser et al. (2013)
 <https://ui.adsabs.harvard.edu/abs/2013A%26A...553A...6H/>`_.
 
@@ -17,12 +17,12 @@ custom narrow passbands. The package can be
 2. directly integrated into the log posterior computation of any pre-existing
    transit modeling code with minimal modifications.
 
-The second approach constrains the LD model parameter space directly by the LD
-profile, allowing for marginalization over the whole parameter space that can
-explain the profile without the need to approximate this constraint by a prior
-distribution. This is useful when using a high-order limb darkening model where
-the coefficients are often correlated, and priors estimated from tabulated
-values usually fail to include these correlations.
+The second approach constrains the LD model parameters directly with the LD
+profile, without approximating the constraint by a prior distribution.
+
+This matters most for high-order limb darkening models. Their coefficients are
+often strongly correlated, and priors estimated from tabulated values usually
+miss these correlations.
 
 Example
 -------
@@ -61,6 +61,7 @@ Contents
    profiles
    likelihoods
    api
+   changelog
 
 Citing LDTk
 -----------
@@ -74,7 +75,8 @@ If you use LDTk in your research, please cite
 and the paper describing the PHOENIX spectrum library the profiles are based on
 
     Husser, T.-O., et al. (2013). *A new extensive library of PHOENIX stellar
-    atmospheres and synthetic spectra.* A&A, 553, A6.
+    atmospheres and synthetic spectra.* A&A, 553, A6. `doi:10.1051/0004-6361/201219058
+    <https://doi.org/10.1051/0004-6361/201219058>`_
 
 Indices and tables
 ------------------

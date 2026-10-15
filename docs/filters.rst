@@ -4,9 +4,11 @@ Filters
 =======
 
 Filters define the passbands the limb darkening profiles are integrated over.
-All wavelengths in LDTk are given in nanometers. Every filter implements
-``integrate(wavelengths, values)``, so custom filters can be added by
-subclassing :class:`~ldtk.filters.Filter`.
+All wavelengths in LDTk are given in nanometers. Custom filters can be added by
+subclassing :class:`~ldtk.filters.Filter` and implementing ``__call__(wl)``,
+which returns the transmission at the given wavelengths, and
+``integrate(wavelengths, values)``, which integrates the spectra over the
+passband.
 
 Boxcar filters
 --------------

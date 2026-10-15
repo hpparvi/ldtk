@@ -33,8 +33,7 @@ source_suffix = {
 
 root_doc = 'index'
 language = 'en'
-templates_path = ['_templates']
-exclude_patterns = []
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 numpydoc_show_class_members = False
 
@@ -49,11 +48,10 @@ intersphinx_mapping = {
 
 html_theme = 'sphinx_book_theme'
 html_title = f'LDTk {release}'
-html_static_path = ['_static']
 
 html_theme_options = {
     'repository_url': 'https://github.com/hpparvi/ldtk',
     'use_repository_button': True,
     'use_issues_button': True,
-    'path_to_docs': 'docs/source',
+    'path_to_docs': 'docs',
 }

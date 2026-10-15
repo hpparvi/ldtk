@@ -16,11 +16,11 @@ Abbr.      Model                           npar Reference
 ``ln``     Linear                          1    Schwarzschild (1906)
 ``qd``     Quadratic                       2    Kopal (1950)
 ``tq``     Triangular quadratic            2    Kipping (2013)
-``sq``     Square root                     2    van Hamme (1993)
+``sq``     Square root                     2    Díaz-Cordovés & Giménez (1992)
 ``nl``     Nonlinear (four-parameter)      4    Claret (2000)
 ``ge``     General                         any  Giménez (2006)
 ``p2``     Power-2                         2    Morello et al. (2017)
-``p2mp``   Power-2, alt. parametrisation   2    Maxted (2018)
+``p2mp``   Power-2, alt. parametrization   2    Maxted (2018)
 ========== =============================== ==== =========================
 
 Estimating coefficients
@@ -36,6 +36,11 @@ return arrays of coefficients and uncertainties:
     qc, qe = ps.coeffs_qd(do_mc=True)  # uncertainties from a built-in
                                        # Metropolis MCMC
     qc, qc_cov = ps.coeffs_qd(return_cm=True)  # full covariance matrices
+
+The MCMC run can be controlled with ``n_mc_samples``, ``mc_thin``, and
+``mc_burn``. The general model has any number of coefficients, set with
+``ngc`` (default 4) when estimating them, and inferred from the coefficient
+array when evaluating the log-likelihood.
 
 Evaluating log-likelihoods
 --------------------------
@@ -58,8 +63,8 @@ parameter vectors per step.
 How the likelihood is calculated
 --------------------------------
 
-Since version 1.9, LDTk calculates the likelihood using reduced-rank Normal
-log-likelihood method (:class:`~ldtk.loglikelihood.ReducedRankLL`) following
+Since version 1.9, LDTk calculates the likelihood using a reduced-rank Normal
+log-likelihood (:class:`~ldtk.loglikelihood.ReducedRankLL`) following
 the Karhunen–Loève eigenmode formalism of `Tegmark et al. (1997)
 <https://ui.adsabs.harvard.edu/abs/1997ApJ...480...22T/>`_.
 
@@ -78,8 +83,12 @@ and :math:`p_i` are the projections of the residuals (mean profile minus
 model) onto the corresponding eigenvectors. The number of kept modes
 :math:`K` is chosen as the smallest number of leading eigenmodes that
 together explain a fraction ``cev`` (default 0.999) of the total sample
-variance; an optional hard cap ``nk`` can also be given. Both are set in the
-:class:`~ldtk.ldtk.LDPSet` constructor.
+variance; an optional hard cap ``nk`` can also be given. Both can be passed to
+:meth:`~ldtk.ldtk.LDPSetCreator.create_profiles`:
+
+.. code-block:: python
+
+    ps = sc.create_profiles(nsamples=500, cev=0.9999, nk=6)
 
 Compared to the earlier likelihood that treated every :math:`\mu` point as an
 independent measurement, this
@@ -112,9 +121,10 @@ The legacy likelihood
 
 The pre-1.9 likelihood, which assumes independent :math:`\mu` points with a
 diagonal covariance, is available for comparison by passing
-``likelihood='diagonal'`` to :class:`~ldtk.ldtk.LDPSet` or by calling
-:meth:`~ldtk.ldtk.LDPSet.set_likelihood_mode`. Note that it can be overconfident
-and that its sharpness grows with the number of :math:`\mu` points set by the resampling.
+``likelihood='diagonal'`` to :meth:`~ldtk.ldtk.LDPSetCreator.create_profiles`
+or by calling :meth:`~ldtk.ldtk.LDPSet.set_likelihood_mode`. It is
+overconfident, and its sharpness grows with the number of :math:`\mu` points
+set by the resampling.
 
 The uncertainty multiplier
 --------------------------
@@ -124,7 +134,4 @@ sample covariance by ``em**2``. Its purpose is to account for the fact that
 the stellar atmosphere models themselves are imperfect: the simulated
 profiles can contain unknown biases and trends that do not agree with
 observations, and this model uncertainty is not captured by propagating the
-stellar parameter uncertainties alone. In earlier LDTk versions the
-multiplier also had to compensate for the overconfidence of the
-independent-points likelihood; with the reduced-rank likelihood that role is
-gone, and the multiplier serves only its original purpose.
+stellar parameter uncertainties alone.
