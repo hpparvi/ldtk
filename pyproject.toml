@@ -13,7 +13,8 @@ classifiers=[
   "Programming Language :: Python",
 ]
 keywords = ['astronomy',  'astrophysics',  'exoplanets']
-dependencies = ["numpy", "numba", "scipy", "astropy", "tqdm", "traitlets", "tenacity",
+requires-python = ">=3.8"
+dependencies = ["numpy", "numba", "scipy", "astropy", "astroquery", "tqdm", "tenacity",
                 "pandas", "matplotlib"]
 
 [project.optional-dependencies]
