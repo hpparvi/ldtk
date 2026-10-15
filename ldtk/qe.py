@@ -42,9 +42,8 @@ class TabulatedQE(QE):
         if isinstance(wl_or_fname,str):
             self.wl, self.tm = loadtxt(wl_or_fname).T
         else:
-            self.wl = asarray(wl)
+            self.wl = asarray(wl_or_fname)
             self.tm = asarray(tm)
-        self.tm *= tmf
 
     def __call__(self, wl):
         return interp(wl, self.wl, self.tm, 0., 0.)
