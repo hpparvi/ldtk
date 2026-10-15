@@ -1,7 +1,7 @@
 # LDTk
 
 [![PyPI](https://img.shields.io/pypi/v/ldtk.svg?style=flat)](https://pypi.org/project/ldtk/)
-[![Docs](https://readthedocs.org/projects/ldtk/badge/?version=latest)](https://ldtk.readthedocs.io/en/latest/)
+[![Docs](https://readthedocs.org/projects/ldtk/badge/?version=stable)](https://ldtk.readthedocs.io/en/stable/)
 [![Licence](http://img.shields.io/badge/license-GPLv2-blue.svg?style=flat)](http://www.gnu.org/licenses/gpl-2.0.html)
 [![MNRAS](https://img.shields.io/badge/MNRAS-10.1093%2Fmnras%2Fstv1857-blue.svg)](https://doi.org/10.1093/mnras/stv1857)
 [![arXiv](http://img.shields.io/badge/arXiv-1508.02634-blue.svg?style=flat)](https://arxiv.org/abs/1508.02634)
