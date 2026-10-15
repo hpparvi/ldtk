@@ -13,7 +13,7 @@ or, for development, cloned from GitHub and installed in editable mode
 
     git clone https://github.com/hpparvi/ldtk.git
     cd ldtk
-    pip install -e ".[test]"     # test extra installs pytest
+    pip install -e ".[test]"     # test extra installs pytest and pytest-cov
     pip install -e ".[docs]"     # docs extra installs Sphinx and the theme
 
 The dependencies (numpy, scipy, numba, astropy, astroquery, and others) are

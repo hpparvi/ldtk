@@ -77,7 +77,7 @@ or clone the source from GitHub and install it in editable mode
 ```bash
 git clone https://github.com/hpparvi/ldtk.git
 cd ldtk
-pip install -e ".[test]"   # the test extra installs pytest
+pip install -e ".[test]"   # the test extra installs pytest and pytest-cov
 pytest tests
 ```
 

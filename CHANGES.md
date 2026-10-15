@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- The `ldtk.qe` module with the `QE` and `TabulatedQE` classes. They were
+  never exported and `TabulatedQE` never worked before 1.9.3. Pass any
+  callable `qe(wl)` to the `qe` argument of `LDPSetCreator` instead.
+
 ## [1.9.3] - 2026-10-15
 
 ### Added
@@ -294,7 +302,8 @@ uploaded to PyPI), accompanying the LDTk paper (Parviainen & Aigrain 2015).
 - Square-root model and a nonlinear model fix (contributed by R. Wichmann).
 - Offline mode, MPI-aware downloads, and initial Python 3 support.
 
-[Unreleased]: https://github.com/hpparvi/ldtk/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/hpparvi/ldtk/compare/v1.9.3...HEAD
+[1.9.3]: https://github.com/hpparvi/ldtk/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/hpparvi/ldtk/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/hpparvi/ldtk/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/hpparvi/ldtk/compare/v1.8.4...v1.9.0

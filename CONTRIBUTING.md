@@ -54,8 +54,8 @@ The test suite does not download any spectra. The likelihood tests build an
 `tests/test_loglikelihood.py`. New tests should do the same, since CI has no
 spectrum cache.
 
-To measure coverage (with `pytest-cov` installed), disable the JIT, because
-the tracer cannot see inside compiled Numba kernels:
+To measure coverage (`pytest-cov` comes with the `test` extra), disable the
+JIT, because the tracer cannot see inside compiled Numba kernels:
 
 ```bash
 NUMBA_DISABLE_JIT=1 pytest tests --cov=ldtk

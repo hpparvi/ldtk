@@ -18,7 +18,7 @@ dependencies = ["numpy", "numba", "scipy", "astropy", "astroquery", "tqdm", "ten
                 "pandas", "matplotlib"]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "pytest-cov"]
 docs = ["sphinx", "sphinx-book-theme", "myst-parser", "numpydoc"]
 
 [project.urls]

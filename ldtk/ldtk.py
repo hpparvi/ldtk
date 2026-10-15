@@ -528,6 +528,11 @@ class LDPSetCreator(object):
         List of filters defining the passbands for which to calculate the
         stellar intensity profiles.
 
+    qe : callable, optional
+        Detector quantum efficiency as a function of wavelength in nm, e.g.,
+        ``lambda wl: numpy.interp(wl, wl_table, qe_table)``. It weights the
+        spectra before the passband integration. Defaults to unity.
+
     offline_mode : bool, optional
         If True, skips any attempts to connect to the FTP server, and uses only cached
         files.
