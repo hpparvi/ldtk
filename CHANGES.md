@@ -7,6 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `LDPSetCreator.create_profiles` accepts the `likelihood`, `cev`, and `nk`
+  arguments and passes them on to the `LDPSet`.
+- A changelog page in the documentation.
+
+### Changed
+
+- The `coeffs_*` and `lnlike_*` methods are now regular `LDPSet` methods with
+  full docstrings, so they appear in the API documentation and in `help()`.
+- `astroquery` is now a required dependency, so `SVOFilter` works without a
+  separate install.
+- LDTk now declares Python 3.8 as its minimum version.
+- Updated the README to reflect the current state of LDTk.
+
+### Removed
+
+- The unused `traitlets` dependency.
+
 ## [1.9.2] - 2026-10-15
 
 ### Added
@@ -31,7 +52,8 @@ release.
   points (Tegmark et al. 1997). Configurable with the `LDPSet` arguments
   `likelihood`, `cev`, and `nk`, or with `set_likelihood_mode()`.
 - `LDPSet.diagnostics()` for inspecting the reduced-rank decomposition.
-- Smooth RBF grid interpolation with `LDPSetCreator(..., interpolation='rbf')`.
+- Smooth radial basis function (RBF) interpolation over the model grid,
+  selected with the `LDPSetCreator` argument `interpolation`.
 - Log-likelihood tests and a `test` install extra.
 
 ### Changed
@@ -39,6 +61,8 @@ release.
 - **The default likelihood is now `'reduced-rank'`**, giving wider and more
   realistic coefficient uncertainties. Use `likelihood='diagonal'` for the
   old behavior.
+- **The default grid interpolation is now `'rbf'`.** Use
+  `interpolation='linear'` for the old piecewise-linear interpolation.
 - `set_uncertainty_multiplier` is now optional rather than a required
   correction.
 - Rewrote the documentation.
@@ -270,6 +294,7 @@ uploaded to PyPI), accompanying the LDTk paper (Parviainen & Aigrain 2015).
 - Square-root model and a nonlinear model fix (contributed by R. Wichmann).
 - Offline mode, MPI-aware downloads, and initial Python 3 support.
 
+[Unreleased]: https://github.com/hpparvi/ldtk/compare/v1.9.2...HEAD
 [1.9.2]: https://github.com/hpparvi/ldtk/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/hpparvi/ldtk/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/hpparvi/ldtk/compare/v1.8.4...v1.9.0

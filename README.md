@@ -55,7 +55,7 @@ The second approach can be used to constrain the LD model parameter space direct
 
 - **A more realistic likelihood.** The log-likelihood now accounts for the strong correlations between the mu
   points of the limb darkening profiles. The coefficient uncertainties are noticeably wider than in earlier
-  versions, and they no longer depend on how finely the profiles are sampled.
+  versions, and they are largely insensitive to how finely the profiles are sampled.
 - **Smooth grid interpolation.** The profiles are interpolated over the PHOENIX model grid with radial basis
   functions instead of piecewise-linear interpolation.
 
@@ -143,15 +143,16 @@ The likelihood is evaluated in the subspace of the leading principal components 
 covariance (``likelihood='reduced-rank'``, the default), which accounts for the correlations between the mu
 points. ``ps.diagnostics()`` shows how many components are kept for each filter. The legacy likelihood of
 LDTk 1.8 and earlier, which treats every mu point as independent and is overconfident, is available with
-``ps.set_likelihood_mode('diagonal')``.
+``sc.create_profiles(likelihood='diagonal')`` or ``ps.set_likelihood_mode('diagonal')``. The truncation can be
+tuned with the ``cev`` and ``nk`` arguments of ``create_profiles``.
 
 ``ps.set_uncertainty_multiplier(f)`` widens the likelihood by a factor ``f``, for example to account for
 systematic errors in the stellar atmosphere models.
 
 ## Resampling
 
-``LDPSet`` locates the stellar limb automatically and resamples the profiles to be linear in mu. The sampling
-can be changed with
+``LDPSet`` locates the stellar limb automatically and keeps the native mu sampling of the PHOENIX spectra. The
+sampling can be changed with
 
  - ``resample_linear_z(nz=100)``: Resample the profiles to be linear in z
  - ``resample_linear_mu(nmu=100)``: Resample the profiles to be linear in mu
